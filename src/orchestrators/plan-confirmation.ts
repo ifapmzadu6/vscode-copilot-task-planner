@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Logger } from '../utils/logger';
-import { safePostMessage, createPanelPromise } from '../utils/panel';
+import { safePostMessage, createPanelPromise } from '../utils/webview-panel';
 import { MessageHandlerBuilder } from '../utils/message-handler-builder';
 import { PlanGenerator } from '../services';
 import {

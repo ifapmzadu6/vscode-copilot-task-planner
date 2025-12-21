@@ -14,7 +14,7 @@ import { QuestionFlowOrchestrator, PlanConfirmationOrchestrator } from './orches
 
 // Import utilities
 import { Logger } from './utils/logger';
-import { WebviewManager } from './utils/webview-manager';
+import { WebviewPanelManager } from './utils/webview-panel';
 
 // ============================================================
 // Task Planner Tool
@@ -39,7 +39,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
         const cleanRequest = this.cleanUserRequest(userRequest);
         Logger.log(`cleanRequest: ${cleanRequest}`);
 
-        const webviewManager = new WebviewManager();
+        const webviewManager = new WebviewPanelManager();
 
         try {
             // Step 1: Analyze workspace context

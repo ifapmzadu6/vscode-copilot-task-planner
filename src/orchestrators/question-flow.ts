@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Config } from '../constants/config';
 import { Logger } from '../utils/logger';
-import { safePostMessage, createPanelPromise } from '../utils/panel';
+import { safePostMessage, createPanelPromise } from '../utils/webview-panel';
 import { MessageHandlerBuilder } from '../utils/message-handler-builder';
 import { QuestionEngine, QuestionContext } from '../services';
 import {
