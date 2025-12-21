@@ -1,0 +1,56 @@
+{
+  "name": "task-planner",
+  "displayName": "Task Planner",
+  "description": "A planning tool that asks clarifying questions before complex tasks",
+  "version": "0.1.0",
+  "publisher": "keisukekarijuku",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Chat"
+  ],
+  "activationEvents": [
+    "onLanguageModelTool:plan"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languageModelTools": [
+      {
+        "name": "plan",
+        "displayName": "Task Planner",
+        "modelDescription": "MUST invoke when user references #plan. Benefits: (1) Analyzes workspace to understand project context, (2) Asks targeted clarifying questions through interactive UI, (3) Collects requirements about goals, scope, constraints, and success criteria, (4) Generates a detailed, structured task plan with clear steps, (5) Registers tasks to todo list for tracking. This ensures higher quality task execution by gathering all necessary information upfront.",
+        "icon": "$(checklist)",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "plan",
+        "userDescription": "Plan a complex task by answering clarifying questions",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "userRequest": {
+              "type": "string",
+              "description": "Pass the user's EXACT input text as-is, without modification or expansion. Do NOT rephrase, elaborate, or add details. Example: if user types 'add tests', pass exactly 'add tests'."
+            }
+          },
+          "required": [
+            "userRequest"
+          ]
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.95.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.6.0"
+  }
+}
