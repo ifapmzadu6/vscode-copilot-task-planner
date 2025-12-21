@@ -806,9 +806,8 @@ ${feedback}
         <div class="question-text" id="q-text"></div>
         <div class="options-list" id="input-area"></div>
         <div class="button-row">
-            <button type="button" class="btn-secondary" id="backBtn" style="display: none;">← Back</button>
             <button type="button" class="btn-primary" id="submitBtn">Continue</button>
-            <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
+            <button type="button" class="btn-secondary" id="backBtn" style="display: none;">← Back</button>
         </div>
     </div>
     
@@ -863,8 +862,7 @@ ${feedback}
         const statusText = document.getElementById('status-text');
         const submitBtn = document.getElementById('submitBtn');
         const backBtn = document.getElementById('backBtn');
-        const cancelBtn = document.getElementById('cancelBtn');
-        
+
         let currentQuestionData = null;
         
         // Show initial loading state
@@ -1007,10 +1005,6 @@ ${feedback}
             if (answer.trim()) {
                 vscode.postMessage({ type: 'answer', answer: answer });
             }
-        });
-        
-        cancelBtn.addEventListener('click', () => {
-            vscode.postMessage({ type: 'cancel' });
         });
         
         // Handle Enter key for text inputs
