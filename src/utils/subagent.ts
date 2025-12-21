@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Config } from '../constants/config';
+import { Logger } from './logger';
 
 /**
  * Error thrown when a subagent invocation times out
@@ -9,20 +10,6 @@ export class SubagentTimeoutError extends Error {
         super(`Subagent "${description}" timed out after ${timeoutMs}ms`);
         this.name = 'SubagentTimeoutError';
     }
-}
-
-/**
- * Logger utility for consistent logging
- */
-function log(message: string, ...args: unknown[]): void {
-    console.log(`${Config.LOG_PREFIX} ${message}`, ...args);
-}
-
-/**
- * Error logger utility
- */
-function logError(message: string, error: unknown): void {
-    console.error(`${Config.LOG_PREFIX} ${message}`, error);
 }
 
 /**
@@ -42,7 +29,7 @@ export async function invokeSubagent(
     token: vscode.CancellationToken,
     timeoutMs: number = Config.SUBAGENT_TIMEOUT_MS
 ): Promise<string> {
-    log(`invokeSubagent: ${description}`);
+    Logger.log(`invokeSubagent: ${description}`);
 
     // Create timeout promise
     const timeoutPromise = new Promise<never>((_, reject) => {
@@ -68,7 +55,7 @@ export async function invokeSubagent(
                 responseText += part.value;
             }
         }
-        log(`invokeSubagent result length: ${responseText.length}`);
+        Logger.log(`invokeSubagent result length: ${responseText.length}`);
         return responseText;
     })();
 
@@ -100,7 +87,7 @@ export async function invokeSubagentSafely(
         const result = await invokeSubagent(description, prompt, toolInvocationToken, token);
         return result || options.defaultValue;
     } catch (error) {
-        logError(`${description} error:`, error);
+        Logger.error(`${description} error:`, error);
         if (options.onError && error instanceof Error) {
             options.onError(error);
         }

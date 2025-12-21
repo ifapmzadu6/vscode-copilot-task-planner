@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { MessageHandler } from '../types/messages';
+import { MessageHandler, WebviewIncomingMessage, isWebviewMessage } from '../types/messages';
+import { Logger } from './logger';
 
 /**
  * Webview panel utility functions
@@ -19,7 +20,7 @@ export function safePostMessage(panel: vscode.WebviewPanel, message: unknown): b
         return true;
     } catch (error) {
         // Panel is likely disposed
-        console.log('[TaskPlanner] Failed to post message (panel may be disposed):', error);
+        Logger.log('Failed to post message (panel may be disposed):', error);
         return false;
     }
 }
@@ -63,8 +64,15 @@ export function createPanelPromise<T>(
         }
 
         // Listen for messages
-        const messageDisposable = panel.webview.onDidReceiveMessage(async (message: Record<string, unknown>) => {
-            console.log(`[TaskPlanner] Received message: ${JSON.stringify(message)}`);
+        const messageDisposable = panel.webview.onDidReceiveMessage(async (rawMessage: unknown) => {
+            // Validate message structure
+            if (!isWebviewMessage(rawMessage)) {
+                Logger.log(`Received invalid message: ${JSON.stringify(rawMessage)}`);
+                return;
+            }
+
+            const message: WebviewIncomingMessage = rawMessage;
+            Logger.log(`Received message: ${JSON.stringify(message)}`);
 
             for (const handler of handlers) {
                 if (message.type === handler.type) {
@@ -80,14 +88,14 @@ export function createPanelPromise<T>(
 
         // Handle panel disposal
         const panelDisposable = panel.onDidDispose(() => {
-            console.log('[TaskPlanner] Panel disposed while waiting');
+            Logger.log('Panel disposed while waiting');
             safeResolve(null);
         });
         disposables.push(panelDisposable);
 
         // Handle cancellation
         const tokenDisposable = token.onCancellationRequested(() => {
-            console.log('[TaskPlanner] Cancellation requested');
+            Logger.log('Cancellation requested');
             safeResolve(null);
         });
         disposables.push(tokenDisposable);

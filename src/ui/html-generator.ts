@@ -1,4 +1,5 @@
 import { escapeHtml } from '../utils/html';
+import { SUPPORTED_LANGUAGES } from '../constants/languages';
 
 /**
  * Generates CSS styles for the webview
@@ -193,20 +194,9 @@ function generateHtmlStructure(userRequest: string): string {
             <div id="lang-toggle" style="display: flex; gap: 4px; align-items: center;">
                 <span style="font-size: 11px; color: var(--vscode-descriptionForeground);">🌐</span>
                 <select id="lang-select" style="padding: 4px 8px; font-size: 11px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); border-radius: 2px; cursor: pointer;">
-                    <option value="English">English (Original)</option>
-                    <option value="Japanese">日本語</option>
-                    <option value="Chinese Simplified">简体中文</option>
-                    <option value="Chinese Traditional">繁體中文</option>
-                    <option value="Korean">한국어</option>
-                    <option value="French">Français</option>
-                    <option value="German">Deutsch</option>
-                    <option value="Italian">Italiano</option>
-                    <option value="Spanish">Español</option>
-                    <option value="Russian">Русский</option>
-                    <option value="Portuguese Brazilian">Português (Brasil)</option>
-                    <option value="Polish">Polski</option>
-                    <option value="Turkish">Türkçe</option>
-                    <option value="Czech">Čeština</option>
+                    ${SUPPORTED_LANGUAGES.map(lang =>
+                        `<option value="${escapeHtml(lang.value)}">${escapeHtml(lang.label)}</option>`
+                    ).join('\n                    ')}
                 </select>
             </div>
         </div>

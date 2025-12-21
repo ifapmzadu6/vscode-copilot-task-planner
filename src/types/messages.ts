@@ -1,5 +1,6 @@
 /**
- * Message types and type guards for communication between extension and Webview
+ * Message types and type guards for communication between extension and Webview.
+ * Uses discriminated unions for type-safe message handling.
  */
 
 // ============================================================
@@ -84,6 +85,35 @@ export interface ConfirmResult {
 }
 
 // ============================================================
+// Discriminated Union Message Types
+// ============================================================
+
+/**
+ * Messages sent from Webview to extension (incoming messages).
+ * Using discriminated unions for type-safe handling.
+ */
+export type WebviewIncomingMessage =
+    | { type: typeof WebviewMessage.ANSWER; answer: string }
+    | { type: typeof WebviewMessage.BACK }
+    | { type: typeof WebviewMessage.CANCEL }
+    | { type: typeof WebviewMessage.APPROVE_PLAN }
+    | { type: typeof WebviewMessage.REVISE_PLAN; feedback: string }
+    | { type: typeof WebviewMessage.TRANSLATE_PLAN; targetLang: string }
+    | { type: typeof WebviewMessage.SHOW_ORIGINAL };
+
+/**
+ * Messages sent from extension to Webview (outgoing messages).
+ */
+export type ExtensionOutgoingMessage =
+    | { type: typeof ExtensionMessage.NEW_QUESTION; questionNum: number; question: Question; canGoBack: boolean }
+    | { type: typeof ExtensionMessage.QUESTION_ANSWERED; questionNum: number; question: string; answer: string }
+    | { type: typeof ExtensionMessage.REMOVE_LAST_QA }
+    | { type: typeof ExtensionMessage.GENERATING }
+    | { type: typeof ExtensionMessage.SHOW_PLAN; plan: string; isTranslated: boolean }
+    | { type: typeof ExtensionMessage.TRANSLATING }
+    | { type: typeof ExtensionMessage.REVISING };
+
+// ============================================================
 // Message Handler Types
 // ============================================================
 
@@ -94,7 +124,7 @@ export interface MessageHandler<T> {
     /** The message type to handle */
     type: string;
     /** Handler function that returns the resolved value, or undefined to not resolve */
-    handle: (message: Record<string, unknown>) => T | undefined | Promise<T | undefined>;
+    handle: (message: WebviewIncomingMessage) => T | undefined | Promise<T | undefined>;
 }
 
 // ============================================================
@@ -132,22 +162,31 @@ export function isQuestionResponse(obj: unknown): obj is QuestionResponse {
 }
 
 /**
+ * Type guard for any webview message (validates basic structure)
+ */
+export function isWebviewMessage(msg: unknown): msg is WebviewIncomingMessage {
+    if (!isObject(msg)) return false;
+    if (typeof msg.type !== 'string') return false;
+    return Object.values(WebviewMessage).includes(msg.type as typeof WebviewMessage[keyof typeof WebviewMessage]);
+}
+
+/**
  * Type guard for answer message
  */
-export function isAnswerMessage(msg: Record<string, unknown>): msg is { type: string; answer: string } {
-    return typeof msg.answer === 'string';
+export function isAnswerMessage(msg: WebviewIncomingMessage): msg is { type: typeof WebviewMessage.ANSWER; answer: string } {
+    return msg.type === WebviewMessage.ANSWER && 'answer' in msg && typeof msg.answer === 'string';
 }
 
 /**
  * Type guard for revise message
  */
-export function isReviseMessage(msg: Record<string, unknown>): msg is { type: string; feedback: string } {
-    return typeof msg.feedback === 'string';
+export function isReviseMessage(msg: WebviewIncomingMessage): msg is { type: typeof WebviewMessage.REVISE_PLAN; feedback: string } {
+    return msg.type === WebviewMessage.REVISE_PLAN && 'feedback' in msg && typeof msg.feedback === 'string';
 }
 
 /**
  * Type guard for translate message
  */
-export function isTranslateMessage(msg: Record<string, unknown>): msg is { type: string; targetLang: string } {
-    return typeof msg.targetLang === 'string';
+export function isTranslateMessage(msg: WebviewIncomingMessage): msg is { type: typeof WebviewMessage.TRANSLATE_PLAN; targetLang: string } {
+    return msg.type === WebviewMessage.TRANSLATE_PLAN && 'targetLang' in msg && typeof msg.targetLang === 'string';
 }
