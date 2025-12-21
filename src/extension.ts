@@ -858,8 +858,12 @@ ${feedback}
         </div>
         <div id="plan-content" style="white-space: pre-wrap; font-size: 12px; max-height: 400px; overflow-y: auto; background: var(--vscode-editor-background); padding: 12px; border-radius: 4px; margin-bottom: 12px;"></div>
         <div id="feedback-section" style="display: none; margin-bottom: 12px;">
-            <div class="question-label">Revision Request</div>
-            <textarea id="feedback-text" rows="3" placeholder="Enter your feedback..."></textarea>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <div class="question-label" style="margin-bottom: 0;">Revision Request</div>
+                <button type="button" id="feedbackCancelBtn" style="background: none; border: none; color: var(--vscode-descriptionForeground); cursor: pointer; font-size: 12px; padding: 2px 6px;">✕ Cancel</button>
+            </div>
+            <textarea id="feedback-text" rows="3" placeholder="Describe how you want to change the plan..."></textarea>
+            <div id="feedback-error" style="display: none; color: var(--vscode-errorForeground); font-size: 11px; margin-top: 4px;"></div>
         </div>
         <div class="button-row">
             <button type="button" class="btn-primary" id="approveBtn">✓ Approve</button>
@@ -931,6 +935,13 @@ ${feedback}
                 document.getElementById('plan-content').textContent = message.plan;
                 document.getElementById('feedback-section').style.display = 'none';
                 document.getElementById('feedback-text').value = '';
+                document.getElementById('feedback-error').style.display = 'none';
+
+                // Reset Revise button to initial state
+                const reviseBtn = document.getElementById('reviseBtn');
+                reviseBtn.textContent = '✎ Revise';
+                reviseBtn.classList.remove('btn-primary');
+                reviseBtn.classList.add('btn-secondary');
 
                 // Update language select to reflect current state
                 if (!message.isTranslated) {
@@ -960,14 +971,27 @@ ${feedback}
         document.getElementById('reviseBtn').addEventListener('click', () => {
             const feedbackSection = document.getElementById('feedback-section');
             const feedbackText = document.getElementById('feedback-text');
-            
+            const feedbackError = document.getElementById('feedback-error');
+            const reviseBtn = document.getElementById('reviseBtn');
+
             if (feedbackSection.style.display === 'none') {
+                // Show feedback section and change button text
                 feedbackSection.style.display = 'block';
+                reviseBtn.textContent = '📤 Send Revision';
+                reviseBtn.classList.remove('btn-secondary');
+                reviseBtn.classList.add('btn-primary');
+                feedbackError.style.display = 'none';
                 feedbackText.focus();
             } else {
                 const feedback = feedbackText.value.trim();
                 if (feedback) {
+                    feedbackError.style.display = 'none';
                     vscode.postMessage({ type: 'revisePlan', feedback: feedback });
+                } else {
+                    // Show error for empty feedback
+                    feedbackError.textContent = 'Please enter your revision request.';
+                    feedbackError.style.display = 'block';
+                    feedbackText.focus();
                 }
             }
         });
@@ -975,7 +999,22 @@ ${feedback}
         document.getElementById('planCancelBtn').addEventListener('click', () => {
             vscode.postMessage({ type: 'cancel' });
         });
-        
+
+        document.getElementById('feedbackCancelBtn').addEventListener('click', () => {
+            const feedbackSection = document.getElementById('feedback-section');
+            const feedbackText = document.getElementById('feedback-text');
+            const feedbackError = document.getElementById('feedback-error');
+            const reviseBtn = document.getElementById('reviseBtn');
+
+            // Hide feedback section and reset button
+            feedbackSection.style.display = 'none';
+            feedbackText.value = '';
+            feedbackError.style.display = 'none';
+            reviseBtn.textContent = '✎ Revise';
+            reviseBtn.classList.remove('btn-primary');
+            reviseBtn.classList.add('btn-secondary');
+        });
+
         document.getElementById('lang-select').addEventListener('change', (e) => {
             const lang = e.target.value;
             if (lang === 'English') {
