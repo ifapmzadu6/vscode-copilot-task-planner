@@ -1,5 +1,52 @@
 import * as vscode from 'vscode';
 
+// ============================================================
+// Constants - Message Types
+// ============================================================
+
+/**
+ * Message types sent from extension to Webview
+ */
+const ExtensionMessage = {
+    NEW_QUESTION: 'newQuestion',
+    QUESTION_ANSWERED: 'questionAnswered',
+    REMOVE_LAST_QA: 'removeLastQA',
+    GENERATING: 'generating',
+    SHOW_PLAN: 'showPlan',
+    TRANSLATING: 'translating',
+    REVISING: 'revising',
+} as const;
+
+/**
+ * Message types sent from Webview to extension
+ */
+const WebviewMessage = {
+    ANSWER: 'answer',
+    BACK: 'back',
+    CANCEL: 'cancel',
+    APPROVE_PLAN: 'approvePlan',
+    REVISE_PLAN: 'revisePlan',
+    TRANSLATE_PLAN: 'translatePlan',
+    SHOW_ORIGINAL: 'showOriginal',
+} as const;
+
+// ============================================================
+// Configuration Constants
+// ============================================================
+
+const Config = {
+    /** Timeout for subagent invocations (30 seconds) */
+    SUBAGENT_TIMEOUT_MS: 30000,
+    /** Maximum retry attempts for JSON parsing */
+    MAX_JSON_PARSE_RETRIES: 2,
+    /** Maximum number of questions to ask */
+    MAX_QUESTIONS: 5,
+} as const;
+
+// ============================================================
+// Types
+// ============================================================
+
 /**
  * Input schema for the plan tool
  */
@@ -34,33 +81,206 @@ interface QuestionResponse {
     reason?: string;
 }
 
+// ============================================================
+// Helper Functions
+// ============================================================
+
 /**
- * Helper function to invoke runSubagent and extract text result
+ * Error thrown when a subagent invocation times out
+ */
+class SubagentTimeoutError extends Error {
+    constructor(description: string, timeoutMs: number) {
+        super(`Subagent "${description}" timed out after ${timeoutMs}ms`);
+        this.name = 'SubagentTimeoutError';
+    }
+}
+
+/**
+ * Helper function to invoke runSubagent with timeout and extract text result
  */
 async function invokeSubagent(
     description: string,
     prompt: string,
     toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
-    token: vscode.CancellationToken
+    token: vscode.CancellationToken,
+    timeoutMs: number = Config.SUBAGENT_TIMEOUT_MS
 ): Promise<string> {
     console.log(`[TaskPlanner] invokeSubagent: ${description}`);
-    const result = await vscode.lm.invokeTool(
-        'runSubagent',
-        {
-            input: { description, prompt },
-            toolInvocationToken
-        },
-        token
-    );
 
-    let responseText = '';
-    for (const part of result.content) {
-        if (part instanceof vscode.LanguageModelTextPart) {
-            responseText += part.value;
+    // Create timeout promise
+    const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+            reject(new SubagentTimeoutError(description, timeoutMs));
+        }, timeoutMs);
+    });
+
+    // Create the actual invocation promise
+    const invocationPromise = (async () => {
+        const result = await vscode.lm.invokeTool(
+            'runSubagent',
+            {
+                input: { description, prompt },
+                toolInvocationToken
+            },
+            token
+        );
+
+        let responseText = '';
+        for (const part of result.content) {
+            if (part instanceof vscode.LanguageModelTextPart) {
+                responseText += part.value;
+            }
+        }
+        console.log(`[TaskPlanner] invokeSubagent result length: ${responseText.length}`);
+        return responseText;
+    })();
+
+    // Race between invocation and timeout
+    return Promise.race([invocationPromise, timeoutPromise]);
+}
+
+/**
+ * Safely post a message to a webview panel.
+ * Returns false if the panel is disposed or posting fails.
+ */
+function safePostMessage(panel: vscode.WebviewPanel, message: unknown): boolean {
+    try {
+        panel.webview.postMessage(message);
+        return true;
+    } catch (error) {
+        // Panel is likely disposed
+        console.log('[TaskPlanner] Failed to post message (panel may be disposed):', error);
+        return false;
+    }
+}
+
+/**
+ * Message handler configuration for createPanelPromise
+ */
+interface MessageHandler<T> {
+    /** The message type to handle */
+    type: string;
+    /** Handler function that returns the resolved value, or undefined to not resolve */
+    handle: (message: Record<string, unknown>) => T | undefined | Promise<T | undefined>;
+}
+
+/**
+ * Attempts to parse JSON from a response string with retry logic.
+ * Tries to extract JSON object from the response and parse it.
+ * @param response - The raw response string
+ * @param validator - Optional function to validate the parsed object
+ * @returns The parsed object or null if parsing fails after retries
+ */
+function parseJsonWithRetry<T>(
+    response: string,
+    validator?: (obj: unknown) => obj is T
+): T | null {
+    // Try to find JSON object in the response
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+        console.log('[TaskPlanner] Could not find JSON in response');
+        return null;
+    }
+
+    const jsonStr = jsonMatch[0];
+
+    for (let attempt = 0; attempt < Config.MAX_JSON_PARSE_RETRIES; attempt++) {
+        try {
+            const parsed = JSON.parse(jsonStr);
+
+            // Validate if validator is provided
+            if (validator && !validator(parsed)) {
+                console.log(`[TaskPlanner] JSON validation failed on attempt ${attempt + 1}`);
+                continue;
+            }
+
+            return parsed as T;
+        } catch (error) {
+            console.error(`[TaskPlanner] JSON parse error on attempt ${attempt + 1}:`, error);
+
+            // On last attempt, try to fix common JSON issues
+            if (attempt === Config.MAX_JSON_PARSE_RETRIES - 1) {
+                try {
+                    // Try fixing common issues like trailing commas
+                    const fixedJson = jsonStr
+                        .replace(/,\s*}/g, '}')
+                        .replace(/,\s*]/g, ']');
+                    const parsed = JSON.parse(fixedJson);
+                    if (!validator || validator(parsed)) {
+                        return parsed as T;
+                    }
+                } catch {
+                    // Give up
+                }
+            }
         }
     }
-    console.log(`[TaskPlanner] invokeSubagent result length: ${responseText.length}`);
-    return responseText;
+
+    return null;
+}
+
+/**
+ * Creates a Promise that listens to Webview messages and resolves based on handlers.
+ * Automatically handles disposal and cancellation.
+ */
+function createPanelPromise<T>(
+    panel: vscode.WebviewPanel,
+    handlers: MessageHandler<T | null>[],
+    token: vscode.CancellationToken,
+    onSetup?: () => void
+): Promise<T | null> {
+    return new Promise((resolve) => {
+        let resolved = false;
+        const disposables: vscode.Disposable[] = [];
+
+        const disposeAll = () => {
+            disposables.forEach(d => d.dispose());
+            disposables.length = 0;
+        };
+
+        const safeResolve = (value: T | null) => {
+            if (!resolved) {
+                resolved = true;
+                disposeAll();
+                resolve(value);
+            }
+        };
+
+        // Call setup callback if provided
+        if (onSetup) {
+            onSetup();
+        }
+
+        // Listen for messages
+        const messageDisposable = panel.webview.onDidReceiveMessage(async (message: Record<string, unknown>) => {
+            console.log(`[TaskPlanner] Received message: ${JSON.stringify(message)}`);
+
+            for (const handler of handlers) {
+                if (message.type === handler.type) {
+                    const result = await handler.handle(message);
+                    if (result !== undefined) {
+                        safeResolve(result);
+                        return;
+                    }
+                }
+            }
+        });
+        disposables.push(messageDisposable);
+
+        // Handle panel disposal
+        const panelDisposable = panel.onDidDispose(() => {
+            console.log('[TaskPlanner] Panel disposed while waiting');
+            safeResolve(null);
+        });
+        disposables.push(panelDisposable);
+
+        // Handle cancellation
+        const tokenDisposable = token.onCancellationRequested(() => {
+            console.log('[TaskPlanner] Cancellation requested');
+            safeResolve(null);
+        });
+        disposables.push(tokenDisposable);
+    });
 }
 
 /**
@@ -116,11 +336,10 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
 
             // Step 3: Dynamic question loop with back support
             console.log('[TaskPlanner] Step 3: Starting question loop...');
-            const maxQuestions = 5;
             const questionHistory: { question: Question; response: QuestionResponse }[] = [];
             let currentIndex = 0;
 
-            while (currentIndex < maxQuestions) {
+            while (currentIndex < Config.MAX_QUESTIONS) {
                 console.log(`[TaskPlanner] Question loop iteration ${currentIndex + 1}`);
 
                 if (token.isCancellationRequested) {
@@ -174,7 +393,6 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
                     questionResponse.question,
                     currentIndex + 1,
                     currentIndex > 0, // canGoBack
-                    panelClosed,
                     token
                 );
                 console.log(`[TaskPlanner] Got result from panel: ${result}`);
@@ -192,7 +410,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
                     if (currentIndex > 0) {
                         currentIndex--;
                         collectedAnswers.pop();
-                        panel.webview.postMessage({ type: 'removeLastQA' });
+                        safePostMessage(panel, { type: ExtensionMessage.REMOVE_LAST_QA });
                     }
                     continue;
                 }
@@ -212,8 +430,8 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
                 console.log(`[TaskPlanner] Stored answer ${currentIndex + 1}: ${result}`);
 
                 // Update panel to show the answered question
-                panel.webview.postMessage({
-                    type: 'questionAnswered',
+                safePostMessage(panel, {
+                    type: ExtensionMessage.QUESTION_ANSWERED,
                     questionNum: currentIndex + 1,
                     question: questionResponse.question.text,
                     answer: result
@@ -225,7 +443,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
             console.log(`[TaskPlanner] Question loop finished. Collected ${collectedAnswers.length} answers`);
 
             // Send completion message to panel
-            panel.webview.postMessage({ type: 'generating' });
+            safePostMessage(panel, { type: ExtensionMessage.GENERATING });
 
             // Step 4: Generate and confirm refined prompt
             console.log('[TaskPlanner] Step 4: Generating refined prompt...');
@@ -242,7 +460,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
             console.log('[TaskPlanner] Step 5: Plan confirmation loop...');
             let confirmed = false;
             while (!confirmed && !panelClosed && !token.isCancellationRequested) {
-                const confirmResult = await this.showPlanConfirmation(panel, refinedPrompt, panelClosed, options.toolInvocationToken, token);
+                const confirmResult = await this.showPlanConfirmation(panel, refinedPrompt, options.toolInvocationToken, token);
                 console.log(`[TaskPlanner] Confirmation result: ${confirmResult?.type}`);
 
                 if (confirmResult === null) {
@@ -258,7 +476,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
                 } else if (confirmResult.type === 'revise' && confirmResult.feedback) {
                     // Revise the plan based on feedback
                     console.log(`[TaskPlanner] Revising plan with feedback: ${confirmResult.feedback}`);
-                    panel.webview.postMessage({ type: 'revising' });
+                    safePostMessage(panel, { type: ExtensionMessage.REVISING });
 
                     refinedPrompt = await this.revisePlan(
                         refinedPrompt,
@@ -393,19 +611,26 @@ Return ONLY valid JSON.`;
         );
         console.log(`[TaskPlanner] generateNextQuestion raw response: ${response.substring(0, 200)}...`);
 
-        try {
-            const jsonMatch = response.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                const parsed = JSON.parse(jsonMatch[0]) as QuestionResponse;
-                console.log(`[TaskPlanner] Parsed response: done=${parsed.done}, question=${parsed.question?.text || 'none'}`);
-                return parsed;
+        // Validator to ensure the parsed object is a valid QuestionResponse
+        const isQuestionResponse = (obj: unknown): obj is QuestionResponse => {
+            if (typeof obj !== 'object' || obj === null) return false;
+            const o = obj as Record<string, unknown>;
+            if (typeof o.done !== 'boolean') return false;
+            if (o.question !== undefined) {
+                const q = o.question as Record<string, unknown>;
+                if (typeof q.text !== 'string' || typeof q.type !== 'string') return false;
             }
-            console.log('[TaskPlanner] Could not find JSON in response');
-            return { done: true, reason: 'Could not parse response' };
-        } catch (parseError) {
-            console.error('[TaskPlanner] JSON parse error:', parseError);
-            return { done: true, reason: 'Parse error' };
+            return true;
+        };
+
+        const parsed = parseJsonWithRetry<QuestionResponse>(response, isQuestionResponse);
+        if (parsed) {
+            console.log(`[TaskPlanner] Parsed response: done=${parsed.done}, question=${parsed.question?.text || 'none'}`);
+            return parsed;
         }
+
+        console.log('[TaskPlanner] Failed to parse response after retries');
+        return { done: true, reason: 'Could not parse response' };
     }
 
     /**
@@ -416,163 +641,109 @@ Return ONLY valid JSON.`;
         question: Question,
         questionNum: number,
         canGoBack: boolean,
-        panelClosed: boolean,
         token: vscode.CancellationToken
     ): Promise<string | null> {
-        console.log(`[TaskPlanner] askQuestionInPanel: Q${questionNum}, canGoBack=${canGoBack}, panelClosed=${panelClosed}`);
-        return new Promise((resolve) => {
-            if (panelClosed) {
-                console.log('[TaskPlanner] Panel already closed, resolving null');
-                resolve(null);
-                return;
-            }
+        console.log(`[TaskPlanner] askQuestionInPanel: Q${questionNum}, canGoBack=${canGoBack}`);
 
-            let resolved = false;
-            const safeResolve = (value: string | null) => {
-                if (!resolved) {
-                    resolved = true;
-                    disposeAll();
-                    resolve(value);
-                }
-            };
+        const handlers: MessageHandler<string | null>[] = [
+            {
+                type: WebviewMessage.ANSWER,
+                handle: (msg) => msg.answer as string,
+            },
+            {
+                type: WebviewMessage.BACK,
+                handle: () => '__BACK__',
+            },
+            {
+                type: WebviewMessage.CANCEL,
+                handle: () => null,
+            },
+        ];
 
-            const disposables: vscode.Disposable[] = [];
-            const disposeAll = () => {
-                disposables.forEach(d => d.dispose());
-                disposables.length = 0;
-            };
-
+        return createPanelPromise(panel, handlers, token, () => {
             // Send the new question to the Webview
             console.log('[TaskPlanner] Posting newQuestion message to Webview');
-            panel.webview.postMessage({
-                type: 'newQuestion',
+            safePostMessage(panel, {
+                type: ExtensionMessage.NEW_QUESTION,
                 questionNum,
                 question,
                 canGoBack
             });
-
-            // Listen for the answer
-            const messageDisposable = panel.webview.onDidReceiveMessage(message => {
-                console.log(`[TaskPlanner] Received message from Webview: ${JSON.stringify(message)}`);
-                if (message.type === 'answer') {
-                    safeResolve(message.answer);
-                } else if (message.type === 'back') {
-                    safeResolve('__BACK__');
-                } else if (message.type === 'cancel') {
-                    safeResolve(null);
-                }
-            });
-            disposables.push(messageDisposable);
-
-            // If panel closes, resolve null
-            const panelDisposable = panel.onDidDispose(() => {
-                console.log('[TaskPlanner] Panel disposed while waiting for answer');
-                safeResolve(null);
-            });
-            disposables.push(panelDisposable);
-
-            // Listen for cancellation token
-            const tokenDisposable = token.onCancellationRequested(() => {
-                console.log('[TaskPlanner] Cancellation requested while waiting for answer');
-                safeResolve(null);
-            });
-            disposables.push(tokenDisposable);
         });
     }
 
     /**
-     * Shows the plan for user confirmation
+     * Result type for plan confirmation
      */
     private showPlanConfirmation(
         panel: vscode.WebviewPanel,
         plan: string,
-        panelClosed: boolean,
         toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
         token: vscode.CancellationToken
     ): Promise<{ type: 'approve' | 'revise'; feedback?: string } | null> {
         console.log('[TaskPlanner] showPlanConfirmation');
 
+        // Mutable state for translation
         let currentDisplayPlan = plan;
         let isTranslated = false;
 
         const sendPlan = () => {
-            panel.webview.postMessage({
-                type: 'showPlan',
+            safePostMessage(panel, {
+                type: ExtensionMessage.SHOW_PLAN,
                 plan: currentDisplayPlan,
                 isTranslated
             });
         };
 
-        return new Promise((resolve) => {
-            if (panelClosed) {
-                resolve(null);
-                return;
-            }
+        type ConfirmResult = { type: 'approve' | 'revise'; feedback?: string };
 
-            let resolved = false;
-            const disposables: vscode.Disposable[] = [];
-            const disposeAll = () => {
-                disposables.forEach(d => d.dispose());
-                disposables.length = 0;
-            };
-
-            const safeResolve = (value: { type: 'approve' | 'revise'; feedback?: string } | null) => {
-                if (!resolved) {
-                    resolved = true;
-                    disposeAll();
-                    resolve(value);
-                }
-            };
-
-            sendPlan();
-
-            const messageDisposable = panel.webview.onDidReceiveMessage(async message => {
-                console.log(`[TaskPlanner] Plan confirmation message: ${JSON.stringify(message)}`);
-                if (message.type === 'approvePlan') {
-                    safeResolve({ type: 'approve' });
-                } else if (message.type === 'revisePlan') {
-                    safeResolve({ type: 'revise', feedback: message.feedback });
-                } else if (message.type === 'translatePlan') {
-                    // Translate to user's language
-                    panel.webview.postMessage({ type: 'translating' });
+        const handlers: MessageHandler<ConfirmResult | null>[] = [
+            {
+                type: WebviewMessage.APPROVE_PLAN,
+                handle: () => ({ type: 'approve' as const }),
+            },
+            {
+                type: WebviewMessage.REVISE_PLAN,
+                handle: (msg) => ({ type: 'revise' as const, feedback: msg.feedback as string }),
+            },
+            {
+                type: WebviewMessage.TRANSLATE_PLAN,
+                handle: async (msg) => {
+                    // Translate to user's language (doesn't resolve the promise)
+                    safePostMessage(panel, { type: ExtensionMessage.TRANSLATING });
                     try {
-                        const translated = await this.translatePlan(plan, message.targetLang, toolInvocationToken, token);
-                        if (!resolved) {
-                            currentDisplayPlan = translated;
-                            isTranslated = true;
-                            sendPlan();
-                        }
+                        const translated = await this.translatePlan(
+                            plan,
+                            msg.targetLang as string,
+                            toolInvocationToken,
+                            token
+                        );
+                        currentDisplayPlan = translated;
+                        isTranslated = true;
+                        sendPlan();
                     } catch (error) {
                         console.error('[TaskPlanner] Translation error:', error);
-                        if (!resolved) {
-                            sendPlan(); // Show current plan on error
-                        }
+                        sendPlan(); // Show current plan on error
                     }
-                } else if (message.type === 'showOriginal') {
-                    if (!resolved) {
-                        currentDisplayPlan = plan;
-                        isTranslated = false;
-                        sendPlan();
-                    }
-                } else if (message.type === 'cancel') {
-                    safeResolve(null);
-                }
-            });
-            disposables.push(messageDisposable);
+                    return undefined; // Don't resolve - continue waiting
+                },
+            },
+            {
+                type: WebviewMessage.SHOW_ORIGINAL,
+                handle: () => {
+                    currentDisplayPlan = plan;
+                    isTranslated = false;
+                    sendPlan();
+                    return undefined; // Don't resolve - continue waiting
+                },
+            },
+            {
+                type: WebviewMessage.CANCEL,
+                handle: () => null,
+            },
+        ];
 
-            const panelDisposable = panel.onDidDispose(() => {
-                console.log('[TaskPlanner] Panel disposed while waiting for plan confirmation');
-                safeResolve(null);
-            });
-            disposables.push(panelDisposable);
-
-            // Listen for cancellation token
-            const tokenDisposable = token.onCancellationRequested(() => {
-                console.log('[TaskPlanner] Cancellation requested while waiting for plan confirmation');
-                safeResolve(null);
-            });
-            disposables.push(tokenDisposable);
-        });
+        return createPanelPromise(panel, handlers, token, sendPlan);
     }
 
     /**
