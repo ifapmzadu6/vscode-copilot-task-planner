@@ -1081,7 +1081,7 @@ ${context}
 ${answersText}
 
 ## Language Rule
-IMPORTANT: Generate the plan in the SAME LANGUAGE as the user's original request.
+IMPORTANT: Always generate the plan in ENGLISH, regardless of the user's language.
 
 ## Output Format
 ${mdBlock}
