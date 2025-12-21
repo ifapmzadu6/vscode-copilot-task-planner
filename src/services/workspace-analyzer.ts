@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Logger } from '../utils/logger';
-import { invokeSubagentSafely } from '../utils/subagent';
+import { invokeSubagent } from '../utils/subagent';
 import { buildAnalyzeWorkspacePrompt } from '../prompts/templates';
 
 /**
@@ -25,15 +25,15 @@ export class WorkspaceAnalyzer {
     ): Promise<string> {
         Logger.log('Analyzing workspace context...');
 
-        const workspaceContext = await invokeSubagentSafely(
+        const workspaceContext = await invokeSubagent(
             'Analyze workspace context',
             buildAnalyzeWorkspacePrompt(userRequest),
             toolInvocationToken,
-            token
+            token,
+            { safe: true, defaultValue: fallbackContext || '' }
         );
 
-        const fullContext = workspaceContext || fallbackContext || '';
-        Logger.log(`Workspace context length: ${fullContext.length}`);
-        return fullContext;
+        Logger.log(`Workspace context length: ${workspaceContext.length}`);
+        return workspaceContext;
     }
 }
