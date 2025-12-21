@@ -12,4 +12,4 @@ export {
     buildRevisePlanPrompt,
     buildRefinedPromptPrompt,
     buildRegisterTasksPrompt
-} from './templates';
+} from './templates/index';
