@@ -310,9 +310,19 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
         token: vscode.CancellationToken
     ): Promise<string | undefined> {
         try {
-            const prompt = `Analyze the current workspace for this request: "${userRequest}"
-Look at: workspace structure, tech stack, relevant files, existing patterns.
-Provide a concise summary (max 150 words) focusing on relevant information.`;
+            const prompt = `Analyze the current workspace to provide context for implementing: "${userRequest}"
+
+## Analysis Focus
+1. **Project Structure**: Identify key directories, entry points, and architectural patterns
+2. **Tech Stack**: Detect frameworks, languages, build tools, and dependencies
+3. **Relevant Files**: Find files likely to be modified or referenced for this task
+4. **Existing Patterns**: Note coding conventions, naming patterns, and design patterns used
+
+## Output Requirements
+- Provide a concise summary (max 150 words)
+- Focus ONLY on information relevant to the user's request
+- Use bullet points for clarity
+- Respond in the SAME LANGUAGE as the user's request`;
 
             const context = await invokeSubagent(
                 'Analyze workspace context',
@@ -575,11 +585,18 @@ Return ONLY valid JSON.`;
         token: vscode.CancellationToken
     ): Promise<string> {
         console.log(`[TaskPlanner] Translating plan to ${targetLang}`);
-        const prompt = `Translate the following task plan to ${targetLang}. Keep the same structure and format.
+        const prompt = `Translate the following task plan to ${targetLang}.
 
+## Translation Rules
+1. **Preserve Structure**: Keep all Markdown formatting (headers, lists, code blocks) intact
+2. **Technical Terms**: Keep technical terms, code snippets, file paths, and command names in their original form
+3. **Consistency**: Maintain consistent terminology throughout the translation
+4. **Natural Flow**: Use natural expressions in ${targetLang}, not literal translations
+
+## Task Plan
 ${plan}
 
-Return ONLY the translated plan.`;
+Return ONLY the translated plan with no additional explanations.`;
 
         const result = await invokeSubagent(
             `Translate plan to ${targetLang}`,
@@ -1052,43 +1069,53 @@ ${feedback}
         const bq = '`';
         const mdBlock = bq + bq + bq;
 
-        const prompt = `Generate a comprehensive task prompt:
+        const prompt = `Generate a comprehensive, actionable task plan based on the gathered information.
 
-## Request
+## User Request
 ${userRequest}
 
-## Context
+## Workspace Context
 ${context}
 
-## Q&A
+## Clarifying Q&A
 ${answersText}
 
-## Format
+## Language Rule
+IMPORTANT: Always generate the plan in ENGLISH, regardless of the user's language.
+
+## Output Format
 ${mdBlock}
-# Task: [Name]
+# Task: [Concise task name]
 
 ## Overview
-[What and why]
+[1-2 sentences: What will be implemented and why it's needed]
 
 ## Goals
-- [Goal 1]
-- [Goal 2]
+- [Specific, measurable goal 1]
+- [Specific, measurable goal 2]
 
 ## Scope
-- [Areas to modify]
+- [Specific files/directories to modify]
+- [What is OUT of scope]
 
 ## Approach
-- [Technical approach]
+- [Key technical decisions and why]
+- [Libraries/APIs to use]
 
 ## Completion Criteria
-- [How to verify]
+- [How to verify the task is complete]
+- [Tests or checks to run]
 
 ## Steps
-1. [Step 1]
-2. [Step 2]
+1. [Atomic, actionable step - should take ~5-15 min each]
+2. [Next step...]
 ${mdBlock}
 
-Be specific and actionable.`;
+## Guidelines
+- Make each step atomic and independently verifiable
+- Include specific file paths when known
+- Steps should be 5-15 minutes of work each
+- Aim for 3-8 steps total`;
 
         const result = await invokeSubagent(
             'Generate task prompt',
