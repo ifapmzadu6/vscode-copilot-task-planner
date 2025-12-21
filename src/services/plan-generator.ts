@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Logger } from '../utils/logger';
-import { invokeSubagent, invokeSubagentSafely } from '../utils/subagent';
+import { invokeSubagent } from '../utils/subagent';
 import {
     buildRefinedPromptPrompt,
     buildTranslatePlanPrompt,
@@ -117,12 +117,13 @@ export class PlanGenerator {
     ): Promise<void> {
         Logger.log('Registering tasks to todo list...');
 
-        await invokeSubagentSafely(
+        await invokeSubagent(
             'Register tasks to todo list',
             buildRegisterTasksPrompt(refinedPrompt),
             toolInvocationToken,
             token,
             {
+                safe: true,
                 onError: (error) => {
                     Logger.error('Failed to register tasks to todo list:', error);
                 }
