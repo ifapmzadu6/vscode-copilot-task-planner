@@ -1,6 +1,6 @@
 import { escapeHtml } from '../utils/html';
 import { SUPPORTED_LANGUAGES } from '../constants/languages';
-import { generateStyles } from './webview-styles';
+import { generateStyles } from './styles';
 import { generateScript } from './webview-script';
 
 /**

@@ -1,17 +1,8 @@
 /**
- * Generates CSS styles for the webview
+ * Component styles: header, panels, inputs, buttons, etc.
  */
-export function generateStyles(): string {
+export function generateComponentStyles(): string {
     return `
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, sans-serif);
-            font-size: var(--vscode-font-size, 13px);
-            color: var(--vscode-foreground);
-            background: var(--vscode-editor-background);
-            padding: 16px;
-            line-height: 1.4;
-        }
         .header {
             display: flex;
             align-items: center;
@@ -140,17 +131,5 @@ export function generateStyles(): string {
             color: var(--vscode-descriptionForeground);
             font-size: 12px;
         }
-        .spinner {
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            border: 2px solid var(--vscode-input-border);
-            border-top-color: var(--vscode-focusBorder);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
     `;
 }

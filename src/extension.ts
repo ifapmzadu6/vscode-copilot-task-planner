@@ -14,7 +14,7 @@ import { QuestionFlowOrchestrator, PlanConfirmationOrchestrator } from './orches
 
 // Import utilities
 import { Logger } from './utils/logger';
-import { WebviewPanelManager } from './utils/webview-panel';
+import { WebviewPanelManager } from './utils/webview';
 
 // ============================================================
 // Task Planner Tool
