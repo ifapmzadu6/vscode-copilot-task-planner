@@ -4,13 +4,11 @@ import * as vscode from 'vscode';
 import {
     PlanToolInput,
     Question,
-    CollectedAnswer,
-    QuestionResponse,
     ConfirmResult,
     MessageHandler,
     ExtensionMessage,
     WebviewMessage,
-    isQuestionResponse,
+    WebviewIncomingMessage,
     isAnswerMessage,
     isReviseMessage,
     isTranslateMessage,
@@ -19,33 +17,15 @@ import {
 // Import constants
 import { Config } from './constants/config';
 
-// Import utilities
-import { invokeSubagent, invokeSubagentSafely } from './utils/subagent';
-import { parseJsonWithRetry } from './utils/json';
-import { safePostMessage, createPanelPromise } from './utils/panel';
+// Import services
+import { WorkspaceAnalyzer, QuestionEngine, PlanGenerator, QuestionContext } from './services';
 
-// Import prompt templates
-import {
-    buildAnalyzeWorkspacePrompt,
-    buildNextQuestionPrompt,
-    buildTranslatePlanPrompt,
-    buildRevisePlanPrompt,
-    buildRefinedPromptPrompt,
-    buildRegisterTasksPrompt,
-} from './prompts/templates';
+// Import utilities
+import { Logger } from './utils/logger';
+import { safePostMessage, createPanelPromise } from './utils/panel';
 
 // Import UI generators
 import { generateBaseHtml } from './ui/html-generator';
-
-// ============================================================
-// Logger Utility
-// ============================================================
-
-const log = (message: string, ...args: unknown[]) =>
-    console.log(`${Config.LOG_PREFIX} ${message}`, ...args);
-
-const logError = (message: string, error: unknown) =>
-    console.error(`${Config.LOG_PREFIX} ${message}`, error);
 
 // ============================================================
 // Task Planner Tool
@@ -56,22 +36,26 @@ const logError = (message: string, error: unknown) =>
  * Uses runSubagent + single persistent Webview for dynamic interactive question flow
  */
 class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
+    private readonly workspaceAnalyzer = new WorkspaceAnalyzer();
+    private readonly questionEngine = new QuestionEngine();
+    private readonly planGenerator = new PlanGenerator();
 
     async invoke(
         options: vscode.LanguageModelToolInvocationOptions<PlanToolInput>,
         token: vscode.CancellationToken
     ): Promise<vscode.LanguageModelToolResult> {
         const { userRequest, context } = options.input;
-        log(`invoke called with userRequest: ${userRequest}`);
+        Logger.log(`invoke called with userRequest: ${userRequest}`);
 
         const cleanRequest = this.cleanUserRequest(userRequest);
-        log(`cleanRequest: ${cleanRequest}`);
+        Logger.log(`cleanRequest: ${cleanRequest}`);
 
         let panel: vscode.WebviewPanel | null = null;
 
         try {
             // Step 1: Analyze workspace context
-            const fullContext = await this.runWorkspaceAnalysis(
+            Logger.log('Step 1: Analyzing workspace context...');
+            const fullContext = await this.workspaceAnalyzer.analyze(
                 cleanRequest,
                 context,
                 options.toolInvocationToken,
@@ -111,7 +95,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
             }
 
             // Step 5: Register tasks to todo list
-            await this.registerTasksToTodoList(
+            await this.planGenerator.registerTasks(
                 refinedPrompt,
                 options.toolInvocationToken,
                 token
@@ -119,13 +103,13 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
 
             // Cleanup and return
             panel.dispose();
-            log('Returning refined prompt');
+            Logger.log('Returning refined prompt');
             return new vscode.LanguageModelToolResult([
                 new vscode.LanguageModelTextPart(refinedPrompt)
             ]);
 
         } catch (error) {
-            logError('Error:', error);
+            Logger.error('Error:', error);
             panel?.dispose();
 
             if (error instanceof Error && error.message === 'Cancelled by user') {
@@ -140,37 +124,14 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
     }
 
     // ============================================================
-    // Main Flow Methods
+    // Panel Creation
     // ============================================================
-
-    /**
-     * Runs workspace analysis phase
-     */
-    private async runWorkspaceAnalysis(
-        cleanRequest: string,
-        context: string | undefined,
-        toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
-        token: vscode.CancellationToken
-    ): Promise<string> {
-        log('Step 1: Analyzing workspace context...');
-
-        const workspaceContext = await invokeSubagentSafely(
-            'Analyze workspace context',
-            buildAnalyzeWorkspacePrompt(cleanRequest),
-            toolInvocationToken,
-            token
-        );
-
-        const fullContext = workspaceContext || context || '';
-        log(`Workspace context length: ${fullContext.length}`);
-        return fullContext;
-    }
 
     /**
      * Creates the webview panel
      */
     private createWebviewPanel(cleanRequest: string): vscode.WebviewPanel {
-        log('Step 2: Creating Webview panel...');
+        Logger.log('Step 2: Creating Webview panel...');
 
         const panel = vscode.window.createWebviewPanel(
             Config.UI.PANEL_ID,
@@ -180,9 +141,13 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
         );
 
         panel.webview.html = generateBaseHtml(cleanRequest);
-        log('Webview panel created');
+        Logger.log('Webview panel created');
         return panel;
     }
+
+    // ============================================================
+    // Question Loop
+    // ============================================================
 
     /**
      * Runs the question loop phase
@@ -194,32 +159,28 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
         fullContext: string,
         toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
         token: vscode.CancellationToken
-    ): Promise<CollectedAnswer[] | null> {
-        log('Step 3: Starting question loop...');
+    ): Promise<typeof ctx.answers | null> {
+        Logger.log('Step 3: Starting question loop...');
 
-        const collectedAnswers: CollectedAnswer[] = [];
-        const questionHistory: { question: Question; response: QuestionResponse }[] = [];
-        let currentIndex = 0;
+        const ctx = this.questionEngine.createContext();
         let panelClosed = false;
 
         panel.onDidDispose(() => {
-            log('Panel disposed');
+            Logger.log('Panel disposed');
             panelClosed = true;
         });
 
-        while (currentIndex < Config.MAX_QUESTIONS) {
-            log(`Question loop iteration ${currentIndex + 1}`);
+        while (ctx.currentIndex < Config.MAX_QUESTIONS) {
+            Logger.log(`Question loop iteration ${ctx.currentIndex + 1}`);
 
             if (token.isCancellationRequested || panelClosed) {
-                log(token.isCancellationRequested ? 'Cancellation requested' : 'Panel was closed');
+                Logger.log(token.isCancellationRequested ? 'Cancellation requested' : 'Panel was closed');
                 break;
             }
 
             // Get or generate question
-            const questionResponse = await this.getOrGenerateQuestion(
-                currentIndex,
-                questionHistory,
-                collectedAnswers,
+            const questionResponse = await this.questionEngine.getOrGenerateQuestion(
+                ctx,
                 cleanRequest,
                 fullContext,
                 toolInvocationToken,
@@ -227,7 +188,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
             );
 
             if (!questionResponse || questionResponse.done || !questionResponse.question) {
-                log(`Breaking loop: done=${questionResponse?.done}, reason=${questionResponse?.reason}`);
+                Logger.log(`Breaking loop: done=${questionResponse?.done}, reason=${questionResponse?.reason}`);
                 break;
             }
 
@@ -235,99 +196,46 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
             const result = await this.askQuestionInPanel(
                 panel,
                 questionResponse.question,
-                currentIndex + 1,
-                currentIndex > 0,
+                ctx.currentIndex + 1,
+                this.questionEngine.canGoBack(ctx),
                 token
             );
 
             if (result === null) {
-                log('User cancelled');
+                Logger.log('User cancelled');
                 return null;
             }
 
             if (result === '__BACK__') {
-                if (currentIndex > 0) {
-                    currentIndex--;
-                    collectedAnswers.pop();
+                if (this.questionEngine.goBack(ctx)) {
                     safePostMessage(panel, { type: ExtensionMessage.REMOVE_LAST_QA });
                 }
                 continue;
             }
 
             // Store answer
-            this.storeAnswer(collectedAnswers, currentIndex, questionResponse.question.text, result);
+            this.questionEngine.storeAnswer(ctx, questionResponse.question.text, result);
 
             // Update panel
             safePostMessage(panel, {
                 type: ExtensionMessage.QUESTION_ANSWERED,
-                questionNum: currentIndex + 1,
+                questionNum: ctx.currentIndex + 1,
                 question: questionResponse.question.text,
                 answer: result
             });
 
-            currentIndex++;
+            this.questionEngine.advance(ctx);
         }
 
-        log(`Question loop finished. Collected ${collectedAnswers.length} answers`);
+        Logger.log(`Question loop finished. Collected ${ctx.answers.length} answers`);
         safePostMessage(panel, { type: ExtensionMessage.GENERATING });
 
-        return collectedAnswers;
+        return ctx.answers;
     }
 
-    /**
-     * Gets a question from cache or generates a new one
-     */
-    private async getOrGenerateQuestion(
-        currentIndex: number,
-        questionHistory: { question: Question; response: QuestionResponse }[],
-        collectedAnswers: CollectedAnswer[],
-        cleanRequest: string,
-        fullContext: string,
-        toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
-        token: vscode.CancellationToken
-    ): Promise<QuestionResponse | null> {
-        // Check cache first
-        if (currentIndex < questionHistory.length) {
-            log('Using cached question');
-            return questionHistory[currentIndex].response;
-        }
-
-        // Generate new question
-        log('Generating new question...');
-        const answersForGeneration = collectedAnswers.slice(0, currentIndex);
-        const questionResponse = await this.generateNextQuestion(
-            cleanRequest,
-            fullContext,
-            answersForGeneration,
-            toolInvocationToken,
-            token
-        );
-
-        if (questionResponse.question) {
-            questionHistory.push({ question: questionResponse.question, response: questionResponse });
-            log(`Cached question: ${questionResponse.question.text}`);
-        }
-
-        return questionResponse;
-    }
-
-    /**
-     * Stores or updates an answer at the given index
-     */
-    private storeAnswer(
-        collectedAnswers: CollectedAnswer[],
-        index: number,
-        question: string,
-        answer: string
-    ): void {
-        const answerObj = { question, answer };
-        if (index < collectedAnswers.length) {
-            collectedAnswers[index] = answerObj;
-        } else {
-            collectedAnswers.push(answerObj);
-        }
-        log(`Stored answer ${index + 1}: ${answer}`);
-    }
+    // ============================================================
+    // Plan Confirmation Loop
+    // ============================================================
 
     /**
      * Runs the plan confirmation loop
@@ -337,13 +245,13 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
         panel: vscode.WebviewPanel,
         cleanRequest: string,
         fullContext: string,
-        collectedAnswers: CollectedAnswer[],
+        collectedAnswers: QuestionContext['answers'],
         toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
         token: vscode.CancellationToken
     ): Promise<string | null> {
-        log('Step 4: Generating refined prompt...');
+        Logger.log('Step 4: Generating refined prompt...');
 
-        let refinedPrompt = await this.generateRefinedPrompt(
+        let refinedPrompt = await this.planGenerator.generate(
             cleanRequest,
             fullContext,
             collectedAnswers,
@@ -351,8 +259,8 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
             token
         );
 
-        log(`Refined prompt length: ${refinedPrompt.length}`);
-        log('Step 5: Plan confirmation loop...');
+        Logger.log(`Refined prompt length: ${refinedPrompt.length}`);
+        Logger.log('Step 5: Plan confirmation loop...');
 
         let panelClosed = false;
         panel.onDidDispose(() => { panelClosed = true; });
@@ -365,7 +273,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
                 token
             );
 
-            log(`Confirmation result: ${confirmResult?.type}`);
+            Logger.log(`Confirmation result: ${confirmResult?.type}`);
 
             if (confirmResult === null) {
                 return null;
@@ -376,147 +284,18 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
             }
 
             if (confirmResult.type === 'revise' && confirmResult.feedback) {
-                log(`Revising plan with feedback: ${confirmResult.feedback}`);
                 safePostMessage(panel, { type: ExtensionMessage.REVISING });
 
-                refinedPrompt = await this.revisePlan(
+                refinedPrompt = await this.planGenerator.revise(
                     refinedPrompt,
                     confirmResult.feedback,
                     toolInvocationToken,
                     token
                 );
-                log(`Revised prompt length: ${refinedPrompt.length}`);
             }
         }
 
         return null;
-    }
-
-    // ============================================================
-    // Subagent Invocation Methods
-    // ============================================================
-
-    /**
-     * Generates the next question based on collected answers
-     */
-    private async generateNextQuestion(
-        userRequest: string,
-        context: string,
-        collectedAnswers: CollectedAnswer[],
-        toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
-        token: vscode.CancellationToken
-    ): Promise<QuestionResponse> {
-        const prompt = buildNextQuestionPrompt(userRequest, context, collectedAnswers);
-        log('generateNextQuestion prompt sent');
-
-        const response = await invokeSubagent(
-            'Generate next question',
-            prompt,
-            toolInvocationToken,
-            token
-        );
-
-        log(`generateNextQuestion raw response: ${response.substring(0, 200)}...`);
-
-        const parsed = parseJsonWithRetry<QuestionResponse>(response, isQuestionResponse);
-        if (parsed) {
-            log(`Parsed response: done=${parsed.done}, question=${parsed.question?.text || 'none'}`);
-            return parsed;
-        }
-
-        log('Failed to parse response after retries');
-        return { done: true, reason: 'Could not parse response' };
-    }
-
-    /**
-     * Translates the plan to a target language
-     */
-    private async translatePlan(
-        plan: string,
-        targetLang: string,
-        toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
-        token: vscode.CancellationToken
-    ): Promise<string> {
-        log(`Translating plan to ${targetLang}`);
-        const prompt = buildTranslatePlanPrompt(plan, targetLang);
-
-        const result = await invokeSubagent(
-            `Translate plan to ${targetLang}`,
-            prompt,
-            toolInvocationToken,
-            token
-        );
-
-        return result || plan;
-    }
-
-    /**
-     * Revises the plan based on user feedback
-     */
-    private async revisePlan(
-        currentPlan: string,
-        feedback: string,
-        toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
-        token: vscode.CancellationToken
-    ): Promise<string> {
-        const prompt = buildRevisePlanPrompt(currentPlan, feedback);
-
-        const result = await invokeSubagent(
-            'Revise plan based on feedback',
-            prompt,
-            toolInvocationToken,
-            token
-        );
-
-        return result || currentPlan;
-    }
-
-    /**
-     * Generates the final refined prompt
-     */
-    private async generateRefinedPrompt(
-        userRequest: string,
-        context: string,
-        answers: CollectedAnswer[],
-        toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
-        token: vscode.CancellationToken
-    ): Promise<string> {
-        const prompt = buildRefinedPromptPrompt(userRequest, context, answers);
-
-        const result = await invokeSubagent(
-            'Generate task prompt',
-            prompt,
-            toolInvocationToken,
-            token
-        );
-
-        if (!result) throw new Error('No response');
-        return result;
-    }
-
-    /**
-     * Registers tasks to the manage_todo_list tool via runSubagent
-     */
-    private async registerTasksToTodoList(
-        refinedPrompt: string,
-        toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
-        token: vscode.CancellationToken
-    ): Promise<void> {
-        log('Step 6: Registering tasks to todo list...');
-
-        await invokeSubagentSafely(
-            'Register tasks to todo list',
-            buildRegisterTasksPrompt(refinedPrompt),
-            toolInvocationToken,
-            token,
-            {
-                onError: (error) => {
-                    logError('Failed to register tasks to todo list:', error);
-                }
-            }
-        );
-
-        log('Registered tasks to todo list via subagent');
     }
 
     // ============================================================
@@ -533,12 +312,12 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
         canGoBack: boolean,
         token: vscode.CancellationToken
     ): Promise<string | null> {
-        log(`askQuestionInPanel: Q${questionNum}, canGoBack=${canGoBack}`);
+        Logger.log(`askQuestionInPanel: Q${questionNum}, canGoBack=${canGoBack}`);
 
         const handlers: MessageHandler<string | null>[] = [
             {
                 type: WebviewMessage.ANSWER,
-                handle: (msg) => isAnswerMessage(msg) ? msg.answer : null,
+                handle: (msg: WebviewIncomingMessage) => isAnswerMessage(msg) ? msg.answer : undefined,
             },
             {
                 type: WebviewMessage.BACK,
@@ -551,7 +330,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
         ];
 
         return createPanelPromise(panel, handlers, token, () => {
-            log('Posting newQuestion message to Webview');
+            Logger.log('Posting newQuestion message to Webview');
             safePostMessage(panel, {
                 type: ExtensionMessage.NEW_QUESTION,
                 questionNum,
@@ -570,7 +349,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
         toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
         token: vscode.CancellationToken
     ): Promise<ConfirmResult | null> {
-        log('showPlanConfirmation');
+        Logger.log('showPlanConfirmation');
 
         // State for plan display
         interface PlanDisplayState {
@@ -595,18 +374,18 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
             },
             {
                 type: WebviewMessage.REVISE_PLAN,
-                handle: (msg) => isReviseMessage(msg)
+                handle: (msg: WebviewIncomingMessage) => isReviseMessage(msg)
                     ? { type: 'revise' as const, feedback: msg.feedback }
-                    : null,
+                    : undefined,
             },
             {
                 type: WebviewMessage.TRANSLATE_PLAN,
-                handle: async (msg) => {
+                handle: async (msg: WebviewIncomingMessage) => {
                     if (!isTranslateMessage(msg)) return undefined;
 
                     safePostMessage(panel, { type: ExtensionMessage.TRANSLATING });
                     try {
-                        const translated = await this.translatePlan(
+                        const translated = await this.planGenerator.translate(
                             plan,
                             msg.targetLang,
                             toolInvocationToken,
@@ -616,7 +395,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
                         state.isTranslated = true;
                         sendPlan();
                     } catch (error) {
-                        logError('Translation error:', error);
+                        Logger.error('Translation error:', error);
                         sendPlan();
                     }
                     return undefined; // Don't resolve - continue waiting
@@ -679,11 +458,11 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
 // ============================================================
 
 export function activate(context: vscode.ExtensionContext) {
-    log('Extension activated');
+    Logger.log('Extension activated');
     const tool = new TaskPlannerTool();
     context.subscriptions.push(vscode.lm.registerTool(Config.TOOL_NAMES.PLAN, tool));
 }
 
 export function deactivate() {
-    log('Extension deactivated');
+    Logger.log('Extension deactivated');
 }
