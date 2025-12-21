@@ -821,15 +821,15 @@ ${feedback}
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <div class="question-label" style="margin-bottom: 0;">Generated Plan</div>
             <div id="lang-toggle" style="display: flex; gap: 4px; align-items: center;">
-                <select id="lang-select" style="padding: 4px 8px; font-size: 11px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); border-radius: 2px;">
+                <span style="font-size: 11px; color: var(--vscode-descriptionForeground);">🌐</span>
+                <select id="lang-select" style="padding: 4px 8px; font-size: 11px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); border-radius: 2px; cursor: pointer;">
+                    <option value="English">English (Original)</option>
                     <option value="Japanese">日本語</option>
                     <option value="Chinese">中文</option>
                     <option value="Korean">한국어</option>
                     <option value="Spanish">Español</option>
                     <option value="French">Français</option>
                 </select>
-                <button type="button" class="btn-secondary" id="translateBtn" style="padding: 4px 8px; font-size: 11px;">🌐 Translate</button>
-                <button type="button" class="btn-secondary" id="showOriginalBtn" style="padding: 4px 8px; font-size: 11px; display: none;">EN Original</button>
             </div>
         </div>
         <div id="plan-content" style="white-space: pre-wrap; font-size: 12px; max-height: 400px; overflow-y: auto; background: var(--vscode-editor-background); padding: 12px; border-radius: 4px; margin-bottom: 12px;"></div>
@@ -908,11 +908,11 @@ ${feedback}
                 document.getElementById('plan-content').textContent = message.plan;
                 document.getElementById('feedback-section').style.display = 'none';
                 document.getElementById('feedback-text').value = '';
-                
-                // Toggle translation buttons
-                document.getElementById('translateBtn').style.display = message.isTranslated ? 'none' : 'inline-block';
-                document.getElementById('lang-select').style.display = message.isTranslated ? 'none' : 'inline-block';
-                document.getElementById('showOriginalBtn').style.display = message.isTranslated ? 'inline-block' : 'none';
+
+                // Update language select to reflect current state
+                if (!message.isTranslated) {
+                    document.getElementById('lang-select').value = 'English';
+                }
             }
             else if (message.type === 'translating') {
                 document.getElementById('plan-panel').style.display = 'none';
@@ -953,13 +953,13 @@ ${feedback}
             vscode.postMessage({ type: 'cancel' });
         });
         
-        document.getElementById('translateBtn').addEventListener('click', () => {
-            const lang = document.getElementById('lang-select').value;
-            vscode.postMessage({ type: 'translatePlan', targetLang: lang });
-        });
-        
-        document.getElementById('showOriginalBtn').addEventListener('click', () => {
-            vscode.postMessage({ type: 'showOriginal' });
+        document.getElementById('lang-select').addEventListener('change', (e) => {
+            const lang = e.target.value;
+            if (lang === 'English') {
+                vscode.postMessage({ type: 'showOriginal' });
+            } else {
+                vscode.postMessage({ type: 'translatePlan', targetLang: lang });
+            }
         });
         
         function createInputField(question) {
