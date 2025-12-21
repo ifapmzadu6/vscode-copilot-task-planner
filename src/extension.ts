@@ -174,7 +174,8 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
                     questionResponse.question,
                     currentIndex + 1,
                     currentIndex > 0, // canGoBack
-                    panelClosed
+                    panelClosed,
+                    token
                 );
                 console.log(`[TaskPlanner] Got result from panel: ${result}`);
 
@@ -405,7 +406,8 @@ Return ONLY valid JSON.`;
         question: Question,
         questionNum: number,
         canGoBack: boolean,
-        panelClosed: boolean
+        panelClosed: boolean,
+        token: vscode.CancellationToken
     ): Promise<string | null> {
         console.log(`[TaskPlanner] askQuestionInPanel: Q${questionNum}, canGoBack=${canGoBack}, panelClosed=${panelClosed}`);
         return new Promise((resolve) => {
@@ -414,6 +416,21 @@ Return ONLY valid JSON.`;
                 resolve(null);
                 return;
             }
+
+            let resolved = false;
+            const safeResolve = (value: string | null) => {
+                if (!resolved) {
+                    resolved = true;
+                    disposeAll();
+                    resolve(value);
+                }
+            };
+
+            const disposables: vscode.Disposable[] = [];
+            const disposeAll = () => {
+                disposables.forEach(d => d.dispose());
+                disposables.length = 0;
+            };
 
             // Send the new question to the Webview
             console.log('[TaskPlanner] Posting newQuestion message to Webview');
@@ -425,25 +442,31 @@ Return ONLY valid JSON.`;
             });
 
             // Listen for the answer
-            const disposable = panel.webview.onDidReceiveMessage(message => {
+            const messageDisposable = panel.webview.onDidReceiveMessage(message => {
                 console.log(`[TaskPlanner] Received message from Webview: ${JSON.stringify(message)}`);
                 if (message.type === 'answer') {
-                    disposable.dispose();
-                    resolve(message.answer);
+                    safeResolve(message.answer);
                 } else if (message.type === 'back') {
-                    disposable.dispose();
-                    resolve('__BACK__');
+                    safeResolve('__BACK__');
                 } else if (message.type === 'cancel') {
-                    disposable.dispose();
-                    resolve(null);
+                    safeResolve(null);
                 }
             });
+            disposables.push(messageDisposable);
 
             // If panel closes, resolve null
-            panel.onDidDispose(() => {
+            const panelDisposable = panel.onDidDispose(() => {
                 console.log('[TaskPlanner] Panel disposed while waiting for answer');
-                resolve(null);
+                safeResolve(null);
             });
+            disposables.push(panelDisposable);
+
+            // Listen for cancellation token
+            const tokenDisposable = token.onCancellationRequested(() => {
+                console.log('[TaskPlanner] Cancellation requested while waiting for answer');
+                safeResolve(null);
+            });
+            disposables.push(tokenDisposable);
         });
     }
 
@@ -476,36 +499,69 @@ Return ONLY valid JSON.`;
                 return;
             }
 
+            let resolved = false;
+            const disposables: vscode.Disposable[] = [];
+            const disposeAll = () => {
+                disposables.forEach(d => d.dispose());
+                disposables.length = 0;
+            };
+
+            const safeResolve = (value: { type: 'approve' | 'revise'; feedback?: string } | null) => {
+                if (!resolved) {
+                    resolved = true;
+                    disposeAll();
+                    resolve(value);
+                }
+            };
+
             sendPlan();
 
-            const disposable = panel.webview.onDidReceiveMessage(async message => {
+            const messageDisposable = panel.webview.onDidReceiveMessage(async message => {
                 console.log(`[TaskPlanner] Plan confirmation message: ${JSON.stringify(message)}`);
                 if (message.type === 'approvePlan') {
-                    disposable.dispose();
-                    resolve({ type: 'approve' });
+                    safeResolve({ type: 'approve' });
                 } else if (message.type === 'revisePlan') {
-                    disposable.dispose();
-                    resolve({ type: 'revise', feedback: message.feedback });
+                    safeResolve({ type: 'revise', feedback: message.feedback });
                 } else if (message.type === 'translatePlan') {
                     // Translate to user's language
                     panel.webview.postMessage({ type: 'translating' });
-                    const translated = await this.translatePlan(plan, message.targetLang, toolInvocationToken, token);
-                    currentDisplayPlan = translated;
-                    isTranslated = true;
-                    sendPlan();
+                    try {
+                        const translated = await this.translatePlan(plan, message.targetLang, toolInvocationToken, token);
+                        if (!resolved) {
+                            currentDisplayPlan = translated;
+                            isTranslated = true;
+                            sendPlan();
+                        }
+                    } catch (error) {
+                        console.error('[TaskPlanner] Translation error:', error);
+                        if (!resolved) {
+                            sendPlan(); // Show current plan on error
+                        }
+                    }
                 } else if (message.type === 'showOriginal') {
-                    currentDisplayPlan = plan;
-                    isTranslated = false;
-                    sendPlan();
+                    if (!resolved) {
+                        currentDisplayPlan = plan;
+                        isTranslated = false;
+                        sendPlan();
+                    }
                 } else if (message.type === 'cancel') {
-                    disposable.dispose();
-                    resolve(null);
+                    safeResolve(null);
                 }
             });
+            disposables.push(messageDisposable);
 
-            panel.onDidDispose(() => {
-                resolve(null);
+            const panelDisposable = panel.onDidDispose(() => {
+                console.log('[TaskPlanner] Panel disposed while waiting for plan confirmation');
+                safeResolve(null);
             });
+            disposables.push(panelDisposable);
+
+            // Listen for cancellation token
+            const tokenDisposable = token.onCancellationRequested(() => {
+                console.log('[TaskPlanner] Cancellation requested while waiting for plan confirmation');
+                safeResolve(null);
+            });
+            disposables.push(tokenDisposable);
         });
     }
 
