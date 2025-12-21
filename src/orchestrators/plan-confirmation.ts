@@ -2,7 +2,12 @@ import * as vscode from 'vscode';
 import { Logger } from '../utils/logger';
 import { safePostMessage, createPanelPromise } from '../utils/webview-panel';
 import { MessageHandlerBuilder } from '../utils/message-handler-builder';
-import { PlanGenerator } from '../services';
+import {
+    PlanGeneratorService,
+    PlanTranslatorService,
+    PlanReviserService,
+    TaskRegistrationService,
+} from '../services/plan';
 import {
     CollectedAnswer,
     ConfirmResult,
@@ -35,14 +40,30 @@ export interface PlanConfirmationOptions {
 }
 
 /**
+ * Dependencies for the plan confirmation orchestrator.
+ */
+export interface PlanConfirmationDependencies {
+    generator?: PlanGeneratorService;
+    translator?: PlanTranslatorService;
+    reviser?: PlanReviserService;
+    taskRegistration?: TaskRegistrationService;
+}
+
+/**
  * Orchestrates the plan confirmation phase of task planning.
  * Manages plan generation, revision, and translation with user approval.
  */
 export class PlanConfirmationOrchestrator {
-    private readonly planGenerator: PlanGenerator;
+    private readonly generator: PlanGeneratorService;
+    private readonly translator: PlanTranslatorService;
+    private readonly reviser: PlanReviserService;
+    private readonly taskRegistration: TaskRegistrationService;
 
-    constructor(planGenerator?: PlanGenerator) {
-        this.planGenerator = planGenerator ?? new PlanGenerator();
+    constructor(deps: PlanConfirmationDependencies = {}) {
+        this.generator = deps.generator ?? new PlanGeneratorService();
+        this.translator = deps.translator ?? new PlanTranslatorService();
+        this.reviser = deps.reviser ?? new PlanReviserService();
+        this.taskRegistration = deps.taskRegistration ?? new TaskRegistrationService();
     }
 
     /**
@@ -55,7 +76,7 @@ export class PlanConfirmationOrchestrator {
         const { panel, userRequest, context, answers, toolInvocationToken, token } = options;
 
         Logger.log('Generating initial plan...');
-        let refinedPrompt = await this.planGenerator.generate(
+        let refinedPrompt = await this.generator.generate(
             userRequest,
             context,
             answers,
@@ -90,7 +111,7 @@ export class PlanConfirmationOrchestrator {
             if (confirmResult.type === 'revise' && confirmResult.feedback) {
                 safePostMessage(panel, { type: ExtensionMessage.REVISING });
 
-                refinedPrompt = await this.planGenerator.revise(
+                refinedPrompt = await this.reviser.revise(
                     refinedPrompt,
                     confirmResult.feedback,
                     toolInvocationToken,
@@ -114,7 +135,7 @@ export class PlanConfirmationOrchestrator {
         toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
         token: vscode.CancellationToken
     ): Promise<void> {
-        await this.planGenerator.registerTasks(plan, toolInvocationToken, token);
+        await this.taskRegistration.registerTasks(plan, toolInvocationToken, token);
     }
 
     /**
@@ -154,7 +175,7 @@ export class PlanConfirmationOrchestrator {
 
                 safePostMessage(panel, { type: ExtensionMessage.TRANSLATING });
                 try {
-                    const translated = await this.planGenerator.translate(
+                    const translated = await this.translator.translate(
                         plan,
                         msg.targetLang,
                         toolInvocationToken,
