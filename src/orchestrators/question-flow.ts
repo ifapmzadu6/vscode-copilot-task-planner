@@ -65,6 +65,7 @@ export class QuestionFlowOrchestrator {
         while (ctx.currentIndex < RuntimeConfig.MAX_QUESTIONS) {
             Logger.log(`Question loop iteration ${ctx.currentIndex + 1}`);
 
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- panelClosed is mutated in callback
             if (token.isCancellationRequested || panelClosed) {
                 Logger.log(token.isCancellationRequested ? 'Cancellation requested' : 'Panel was closed');
                 break;

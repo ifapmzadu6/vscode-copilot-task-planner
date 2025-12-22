@@ -15,7 +15,7 @@ export function parseJsonWithRetry<T>(
     validator?: (obj: unknown) => obj is T
 ): T | null {
     // Try to find JSON object in the response
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    const jsonMatch = /\{[\s\S]*\}/.exec(response);
     if (!jsonMatch) {
         Logger.log('Could not find JSON in response');
         return null;

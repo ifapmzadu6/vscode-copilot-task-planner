@@ -4,7 +4,8 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
     eslint.configs.recommended,
-    ...tseslint.configs.recommendedTypeChecked,
+    ...tseslint.configs.strictTypeChecked,
+    ...tseslint.configs.stylisticTypeChecked,
     {
         languageOptions: {
             parserOptions: {
@@ -13,14 +14,17 @@ export default tseslint.config(
             },
         },
         rules: {
-            // VSCode API types include 'never' in unions - nothing we can do about it
+            // VSCode API types include 'never' in unions - external dependency issue
             '@typescript-eslint/no-redundant-type-constituents': 'off',
             // Allow unused vars with underscore prefix
             '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-            // Interface implementations may require async without await
-            '@typescript-eslint/require-await': 'off',
             // Control characters are intentionally used in JSON fix regex
             'no-control-regex': 'off',
+            // Allow numbers and booleans in template literals (common logging pattern)
+            '@typescript-eslint/restrict-template-expressions': ['error', {
+                allowNumber: true,
+                allowBoolean: true,
+            }],
         },
     },
     {

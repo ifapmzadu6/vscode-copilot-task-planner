@@ -135,10 +135,10 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
         ]);
     }
 
-    async prepareInvocation(
+    prepareInvocation(
         options: vscode.LanguageModelToolInvocationPrepareOptions<PlanToolInput>,
         _token: vscode.CancellationToken
-    ): Promise<vscode.PreparedToolInvocation> {
+    ): vscode.PreparedToolInvocation {
         const { userRequest } = options.input;
         return {
             invocationMessage: `Planning: "${userRequest.substring(0, 50)}${userRequest.length > 50 ? '...' : ''}"`,
