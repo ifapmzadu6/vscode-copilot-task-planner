@@ -33,7 +33,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
         options: vscode.LanguageModelToolInvocationOptions<PlanToolInput>,
         token: vscode.CancellationToken
     ): Promise<vscode.LanguageModelToolResult> {
-        const { userRequest, context, todoToolName } = options.input;
+        const { userRequest, todoToolName } = options.input;
         Logger.log(`invoke called with userRequest: ${userRequest}`);
 
         const cleanRequest = this.cleanUserRequest(userRequest);
@@ -46,7 +46,6 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
             Logger.log('Step 1: Analyzing workspace context...');
             const fullContext = await this.workspaceAnalyzer.analyze(
                 cleanRequest,
-                context,
                 options.toolInvocationToken,
                 token
             );
