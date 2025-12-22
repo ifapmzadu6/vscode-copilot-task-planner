@@ -14,17 +14,19 @@ export class TaskRegistrationService {
      * @param refinedPrompt - The final plan
      * @param toolInvocationToken - Token for subagent authorization
      * @param token - Cancellation token
+     * @param todoToolName - The name of the todo tool to use
      */
     async registerTasks(
         refinedPrompt: string,
         toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
-        token: vscode.CancellationToken
+        token: vscode.CancellationToken,
+        todoToolName?: string
     ): Promise<void> {
         Logger.log('Registering tasks to todo list...');
 
         await invokeSubagent(
             'Register tasks to todo list',
-            buildRegisterTasksPrompt(refinedPrompt),
+            buildRegisterTasksPrompt(refinedPrompt, todoToolName),
             toolInvocationToken,
             token,
             {

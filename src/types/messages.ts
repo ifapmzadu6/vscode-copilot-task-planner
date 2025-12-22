@@ -43,6 +43,7 @@ export const WebviewMessage = {
 export interface PlanToolInput {
     userRequest: string;
     context?: string;
+    todoToolName?: string;
 }
 
 /**
