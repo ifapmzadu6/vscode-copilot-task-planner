@@ -141,12 +141,19 @@ export class QuestionGeneratorService {
         const prompt = buildNextQuestionPrompt(userRequest, context, collectedAnswers);
         Logger.log('generateNextQuestion prompt sent');
 
-        const response = await invokeSubagent(
-            'Generate next question',
-            prompt,
-            toolInvocationToken,
-            token
-        );
+        let response = '';
+        try {
+            response = await invokeSubagent(
+                'Generate next question',
+                prompt,
+                toolInvocationToken,
+                token
+            );
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            Logger.error('generateNextQuestion failed:', error);
+            return { done: true, reason: errorMessage };
+        }
 
         Logger.log(`generateNextQuestion raw response: ${response.substring(0, 200)}...`);
 
