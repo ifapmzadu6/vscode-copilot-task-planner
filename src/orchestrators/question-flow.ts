@@ -79,9 +79,19 @@ export class QuestionFlowOrchestrator {
                 token
             );
 
-            if (!questionResponse || questionResponse.done || !questionResponse.question) {
-                Logger.log(`Breaking loop: done=${questionResponse?.done}, reason=${questionResponse?.reason}`);
+            // Check if we should break the loop
+            const hasMetMinimum = ctx.answers.length >= RuntimeConfig.MIN_QUESTIONS;
+            const shouldBreak = !questionResponse || !questionResponse.question ||
+                              (questionResponse.done && hasMetMinimum);
+
+            if (shouldBreak) {
+                Logger.log(`Breaking loop: done=${questionResponse?.done}, reason=${questionResponse?.reason}, answers=${ctx.answers.length}`);
                 break;
+            }
+
+            // If subagent said done but we haven't met minimum, log and continue
+            if (questionResponse.done && !hasMetMinimum) {
+                Logger.log(`Subagent suggested done, but only ${ctx.answers.length} answers collected (min: ${RuntimeConfig.MIN_QUESTIONS}). Continuing...`);
             }
 
             // Ask question in panel
