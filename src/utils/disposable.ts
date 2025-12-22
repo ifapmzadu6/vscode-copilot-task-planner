@@ -11,6 +11,8 @@ import * as vscode from 'vscode';
  * @param disposables - Array of disposables to dispose
  */
 export function disposeAll(disposables: vscode.Disposable[]): void {
-    disposables.forEach(d => d.dispose());
+    for (const d of disposables) {
+        d.dispose();
+    }
     disposables.length = 0;
 }
