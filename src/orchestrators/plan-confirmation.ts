@@ -90,6 +90,7 @@ export class PlanConfirmationOrchestrator {
         let panelClosed = false;
         panel.onDidDispose(() => { panelClosed = true; });
 
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- panelClosed is mutated in callback
         while (!panelClosed && !token.isCancellationRequested) {
             const confirmResult = await this.showPlanConfirmation(
                 panel,
@@ -108,7 +109,7 @@ export class PlanConfirmationOrchestrator {
                 return { cancelled: false, plan: refinedPrompt };
             }
 
-            if (confirmResult.type === 'revise' && confirmResult.feedback) {
+            if (confirmResult.feedback) {
                 safePostMessage(panel, { type: ExtensionMessage.REVISING });
 
                 refinedPrompt = await this.reviser.revise(

@@ -19,7 +19,7 @@ export class PromptBuilder {
     /**
      * Adds a titled section to the prompt
      */
-    section(title: string, content: string): PromptBuilder {
+    section(title: string, content: string): this {
         this.sections.push(`## ${title}\n${content}`);
         return this;
     }
@@ -27,7 +27,7 @@ export class PromptBuilder {
     /**
      * Adds a bullet list section
      */
-    bulletSection(title: string, items: string[]): PromptBuilder {
+    bulletSection(title: string, items: string[]): this {
         const bullets = items.map(item => `- ${item}`).join('\n');
         return this.section(title, bullets);
     }
@@ -35,7 +35,7 @@ export class PromptBuilder {
     /**
      * Adds a numbered list section
      */
-    numberedSection(title: string, items: string[]): PromptBuilder {
+    numberedSection(title: string, items: string[]): this {
         const numbered = items.map((item, i) => `${i + 1}. ${item}`).join('\n');
         return this.section(title, numbered);
     }
@@ -43,7 +43,7 @@ export class PromptBuilder {
     /**
      * Adds raw text content
      */
-    text(content: string): PromptBuilder {
+    text(content: string): this {
         this.sections.push(content);
         return this;
     }
@@ -51,8 +51,8 @@ export class PromptBuilder {
     /**
      * Adds a code block
      */
-    codeBlock(code: string, language?: string): PromptBuilder {
-        const lang = language || '';
+    codeBlock(code: string, language?: string): this {
+        const lang = language ?? '';
         this.sections.push(`\`\`\`${lang}\n${code}\n\`\`\``);
         return this;
     }
@@ -60,7 +60,7 @@ export class PromptBuilder {
     /**
      * Adds important instructions with emphasis
      */
-    important(instruction: string): PromptBuilder {
+    important(instruction: string): this {
         this.sections.push(`**IMPORTANT**: ${instruction}`);
         return this;
     }
@@ -68,7 +68,7 @@ export class PromptBuilder {
     /**
      * Sets the expected output format
      */
-    output(format: string): PromptBuilder {
+    output(format: string): this {
         this.outputFormat = format;
         return this;
     }
@@ -76,7 +76,7 @@ export class PromptBuilder {
     /**
      * Adds JSON output format specification
      */
-    jsonOutput(examples: Record<string, unknown>[]): PromptBuilder {
+    jsonOutput(examples: Record<string, unknown>[]): this {
         const exampleStr = examples.map(e => JSON.stringify(e)).join('\n');
         this.outputFormat = `Return ONLY valid JSON.\n${exampleStr}`;
         return this;

@@ -17,7 +17,7 @@ export interface QuestionContext {
     /** Collected answers from the user */
     answers: CollectedAnswer[];
     /** Cache of generated questions and responses */
-    history: Array<{ question: Question; response: QuestionResponse }>;
+    history: { question: Question; response: QuestionResponse }[];
     /** Current question index */
     currentIndex: number;
 }
@@ -152,7 +152,7 @@ export class QuestionGeneratorService {
 
         const parsed = parseJsonWithRetry<QuestionResponse>(response, isQuestionResponse);
         if (parsed) {
-            Logger.log(`Parsed response: done=${parsed.done}, question=${parsed.question?.text || 'none'}`);
+            Logger.log(`Parsed response: done=${parsed.done}, question=${parsed.question?.text ?? 'none'}`);
             return parsed;
         }
 

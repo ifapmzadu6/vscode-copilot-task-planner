@@ -15,7 +15,7 @@ export function parseJsonWithRetry<T>(
     validator?: (obj: unknown) => obj is T
 ): T | null {
     // Try to find JSON object in the response
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    const jsonMatch = /\{[\s\S]*\}/.exec(response);
     if (!jsonMatch) {
         Logger.log('Could not find JSON in response');
         return null;
@@ -25,7 +25,7 @@ export function parseJsonWithRetry<T>(
 
     for (let attempt = 0; attempt < RuntimeConfig.MAX_JSON_PARSE_RETRIES; attempt++) {
         try {
-            const parsed = JSON.parse(jsonStr);
+            const parsed: unknown = JSON.parse(jsonStr);
 
             // Validate if validator is provided
             if (validator && !validator(parsed)) {
@@ -47,7 +47,7 @@ export function parseJsonWithRetry<T>(
     // Final attempt with all fixes applied
     try {
         const fixed = tryFixJson(jsonStr);
-        const parsed = JSON.parse(fixed);
+        const parsed: unknown = JSON.parse(fixed);
         if (!validator || validator(parsed)) {
             Logger.log('Successfully parsed JSON after applying fixes');
             return parsed as T;

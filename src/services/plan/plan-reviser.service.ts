@@ -33,7 +33,7 @@ export class PlanReviserService {
             token
         );
 
-        Logger.log(`Revised plan length: ${result?.length || 0}`);
+        Logger.log(`Revised plan length: ${result.length}`);
         return result || currentPlan;
     }
 }

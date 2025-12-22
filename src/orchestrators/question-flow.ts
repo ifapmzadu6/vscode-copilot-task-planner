@@ -65,6 +65,7 @@ export class QuestionFlowOrchestrator {
         while (ctx.currentIndex < RuntimeConfig.MAX_QUESTIONS) {
             Logger.log(`Question loop iteration ${ctx.currentIndex + 1}`);
 
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- panelClosed is mutated in callback
             if (token.isCancellationRequested || panelClosed) {
                 Logger.log(token.isCancellationRequested ? 'Cancellation requested' : 'Panel was closed');
                 break;
@@ -81,23 +82,29 @@ export class QuestionFlowOrchestrator {
 
             // Check if we should break the loop
             const hasMetMinimum = ctx.answers.length >= RuntimeConfig.MIN_QUESTIONS;
-            const shouldBreak = !questionResponse || !questionResponse.question ||
-                              (questionResponse.done && hasMetMinimum);
+            const question = questionResponse?.question;
 
-            if (shouldBreak) {
-                Logger.log(`Breaking loop: done=${questionResponse?.done}, reason=${questionResponse?.reason}, answers=${ctx.answers.length}`);
+            // Type guard: break if no valid response or question
+            if (!questionResponse || !question) {
+                Logger.log(`Breaking loop: no response or question, answers=${ctx.answers.length}`);
+                break;
+            }
+
+            // Break if done and minimum questions met
+            if (questionResponse.done && hasMetMinimum) {
+                Logger.log(`Breaking loop: done=${questionResponse.done}, reason=${questionResponse.reason}, answers=${ctx.answers.length}`);
                 break;
             }
 
             // If subagent said done but we haven't met minimum, log and continue
-            if (questionResponse.done && !hasMetMinimum) {
+            if (questionResponse.done) {
                 Logger.log(`Subagent suggested done, but only ${ctx.answers.length} answers collected (min: ${RuntimeConfig.MIN_QUESTIONS}). Continuing...`);
             }
 
-            // Ask question in panel
+            // Ask question in panel (question is narrowed to Question type by guards above)
             const result = await this.askQuestionInPanel(
                 panel,
-                questionResponse.question,
+                question,
                 ctx.currentIndex + 1,
                 this.questionService.canGoBack(ctx),
                 token
@@ -116,8 +123,8 @@ export class QuestionFlowOrchestrator {
             }
 
             // Store answer and update panel
-            this.questionService.storeAnswer(ctx, questionResponse.question.text, result);
-            this.notifyQuestionAnswered(panel, ctx, questionResponse.question.text, result);
+            this.questionService.storeAnswer(ctx, question.text, result);
+            this.notifyQuestionAnswered(panel, ctx, question.text, result);
             this.questionService.advance(ctx);
         }
 
