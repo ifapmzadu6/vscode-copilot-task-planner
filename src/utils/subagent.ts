@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Config } from '../constants/config';
+import { RuntimeConfig } from '../constants/runtime';
 import { Logger } from './logger';
 
 /**
@@ -44,7 +44,7 @@ export async function invokeSubagent(
     options: SubagentOptions = {}
 ): Promise<string> {
     const {
-        timeoutMs = Config.SUBAGENT_TIMEOUT_MS,
+        timeoutMs = RuntimeConfig.SUBAGENT_TIMEOUT_MS,
         safe = false,
         defaultValue = '',
         onError
@@ -63,7 +63,7 @@ export async function invokeSubagent(
         // Create the actual invocation promise
         const invocationPromise = (async () => {
             const result = await vscode.lm.invokeTool(
-                Config.TOOL_NAMES.SUBAGENT,
+                RuntimeConfig.TOOL_NAMES.SUBAGENT,
                 {
                     input: { description, prompt },
                     toolInvocationToken

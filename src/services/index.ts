@@ -3,8 +3,8 @@
  * These services encapsulate the business logic for the Task Planner extension.
  */
 
-export { WorkspaceAnalyzer } from './workspace-analyzer';
-export { QuestionEngine, QuestionContext } from './question-engine';
+export { WorkspaceAnalysisService } from './workspace-analysis.service';
+export { QuestionGeneratorService, QuestionContext } from './question-generator.service';
 
 // Plan services (modular, single-responsibility)
 export {

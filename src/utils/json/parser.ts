@@ -1,4 +1,4 @@
-import { Config } from '../../constants/config';
+import { RuntimeConfig } from '../../constants/runtime';
 import { Logger } from '../logger';
 import { tryFixJson } from './fixes';
 
@@ -23,7 +23,7 @@ export function parseJsonWithRetry<T>(
 
     let jsonStr = jsonMatch[0];
 
-    for (let attempt = 0; attempt < Config.MAX_JSON_PARSE_RETRIES; attempt++) {
+    for (let attempt = 0; attempt < RuntimeConfig.MAX_JSON_PARSE_RETRIES; attempt++) {
         try {
             const parsed = JSON.parse(jsonStr);
 
@@ -38,7 +38,7 @@ export function parseJsonWithRetry<T>(
             Logger.log(`JSON parse error on attempt ${attempt + 1}: ${error instanceof Error ? error.message : 'Unknown'}`);
 
             // Apply fixes and retry
-            if (attempt < Config.MAX_JSON_PARSE_RETRIES - 1) {
+            if (attempt < RuntimeConfig.MAX_JSON_PARSE_RETRIES - 1) {
                 jsonStr = tryFixJson(jsonStr);
             }
         }

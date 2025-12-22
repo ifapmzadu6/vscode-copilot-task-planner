@@ -1,4 +1,5 @@
 import { StatusMessages } from '../../../constants/ui';
+import { ExtensionMessage } from '../../../types/messages';
 
 /**
  * Generates message handlers for Q&A related messages
@@ -6,7 +7,7 @@ import { StatusMessages } from '../../../constants/ui';
 export function generateQuestionHandlers(): string {
     return `
         // Handle new question display
-        if (message.type === 'newQuestion') {
+        if (message.type === '${ExtensionMessage.NEW_QUESTION}') {
             currentQuestionData = message.question;
             qNum.textContent = message.questionNum;
             qText.textContent = message.question.text;
@@ -22,7 +23,7 @@ export function generateQuestionHandlers(): string {
             if (input) input.focus();
         }
         // Handle question answered confirmation
-        else if (message.type === 'questionAnswered') {
+        else if (message.type === '${ExtensionMessage.QUESTION_ANSWERED}') {
             const item = document.createElement('div');
             item.className = 'qa-item';
 
@@ -43,7 +44,7 @@ export function generateQuestionHandlers(): string {
             statusText.textContent = '${StatusMessages.THINKING_NEXT_QUESTION}';
         }
         // Handle back navigation (remove last Q&A)
-        else if (message.type === 'removeLastQA') {
+        else if (message.type === '${ExtensionMessage.REMOVE_LAST_QA}') {
             if (qaHistory.lastChild) {
                 qaHistory.removeChild(qaHistory.lastChild);
             }

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Config } from '../../constants/config';
+import { UIConfig } from '../../constants/ui';
 import { MessageHandler } from '../../types/messages';
 import { Logger } from '../logger';
 import { disposeAll } from '../disposable';
@@ -25,8 +25,8 @@ export class WebviewPanelManager {
         Logger.log('Creating Webview panel...');
 
         this.panel = vscode.window.createWebviewPanel(
-            Config.UI.PANEL_ID,
-            Config.UI.PANEL_TITLE,
+            UIConfig.PANEL_ID,
+            UIConfig.PANEL_TITLE,
             vscode.ViewColumn.One,
             { enableScripts: true }
         );
