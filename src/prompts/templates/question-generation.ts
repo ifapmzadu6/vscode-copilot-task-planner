@@ -23,7 +23,7 @@ ${userRequest}
 ## Context
 ${context}
 
-## Previous Q&A
+## Already Covered Topics (DO NOT repeat these)
 ${answersText}
 
 ## Your Task
@@ -31,11 +31,17 @@ Before generating a question, you MAY investigate the workspace or use other too
 
 IMPORTANT: You MUST ask at least 1 question before marking done. Only mark done=true after you have collected at least 1 answer.
 
-Ask about:
+Ask about ONE of these topics that has NOT been covered yet:
 - Goals and success criteria
 - Scope and boundaries
 - Technical constraints
 - Dependencies or risks
+
+## CRITICAL: Avoid Duplicate Questions
+- Review the "Already Covered Topics" section carefully
+- Do NOT ask about topics that have already been discussed
+- Each new question MUST cover a DIFFERENT aspect not yet addressed
+- If a topic was already answered, move on to a new topic
 
 ## Language Rule
 IMPORTANT: Respond in the SAME LANGUAGE as the user's request. If the user wrote in Japanese, generate the question and options in Japanese. If in English, use English.
