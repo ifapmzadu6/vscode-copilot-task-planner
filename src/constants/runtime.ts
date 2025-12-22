@@ -10,6 +10,9 @@ export const RuntimeConfig = {
     /** Maximum retry attempts for JSON parsing */
     MAX_JSON_PARSE_RETRIES: 3,
 
+    /** Minimum number of questions to ask during Q&A phase */
+    MIN_QUESTIONS: 1,
+
     /** Maximum number of questions to ask during Q&A phase */
     MAX_QUESTIONS: 5,
 
