@@ -65,11 +65,6 @@ export function generatePlanEventListeners(): string {
             }
         });
 
-        // Cancel plan button handler
-        document.getElementById('${DomIds.PLAN_CANCEL_BTN}').addEventListener('click', () => {
-            vscode.postMessage({ type: 'cancel' });
-        });
-
         // Cancel feedback button handler
         document.getElementById('${DomIds.FEEDBACK_CANCEL_BTN}').addEventListener('click', () => {
             resetFeedbackSection();

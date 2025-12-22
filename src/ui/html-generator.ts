@@ -58,7 +58,6 @@ function generateHtmlStructure(userRequest: string): string {
         <div class="button-row">
             <button type="button" class="btn-primary" id="${DomIds.APPROVE_BTN}">✓ Approve</button>
             <button type="button" class="btn-secondary" id="${DomIds.REVISE_BTN}">${ButtonLabels.REVISE_IDLE}</button>
-            <button type="button" class="btn-secondary" id="${DomIds.PLAN_CANCEL_BTN}">Cancel</button>
         </div>
     </div>
     `;
