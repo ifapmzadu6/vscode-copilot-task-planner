@@ -127,11 +127,20 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
     }
 
     /**
-     * Creates a cancelled result
+     * Creates a cancelled result with clear messaging to stop further processing
      */
     private createCancelledResult(): vscode.LanguageModelToolResult {
+        const cancelMessage = [
+            '## Planning Cancelled',
+            '',
+            'The user has cancelled the planning process by closing the planning window.',
+            '',
+            '**No further action is required.** Please do not proceed with any task execution or planning.',
+            'If the user wants to create a plan, they can invoke the planning tool again.',
+        ].join('\n');
+
         return new vscode.LanguageModelToolResult([
-            new vscode.LanguageModelTextPart('User cancelled the planning process.')
+            new vscode.LanguageModelTextPart(cancelMessage)
         ]);
     }
 
