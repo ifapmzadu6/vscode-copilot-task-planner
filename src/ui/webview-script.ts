@@ -1,3 +1,4 @@
+import { DomIds } from '../constants/ui';
 import { generateHelperFunctions, generateMessageHandlers, generateEventListeners } from './webview';
 
 /**
@@ -6,15 +7,15 @@ import { generateHelperFunctions, generateMessageHandlers, generateEventListener
 function generateInitialization(): string {
     return `
         const vscode = acquireVsCodeApi();
-        const qaHistory = document.getElementById('qa-history');
-        const currentQuestion = document.getElementById('current-question');
-        const qNum = document.getElementById('q-num');
-        const qText = document.getElementById('q-text');
-        const inputArea = document.getElementById('input-area');
-        const status = document.getElementById('status');
-        const statusText = document.getElementById('status-text');
-        const submitBtn = document.getElementById('submitBtn');
-        const backBtn = document.getElementById('backBtn');
+        const qaHistory = document.getElementById('${DomIds.QA_HISTORY}');
+        const currentQuestion = document.getElementById('${DomIds.CURRENT_QUESTION}');
+        const qNum = document.getElementById('${DomIds.Q_NUM}');
+        const qText = document.getElementById('${DomIds.Q_TEXT}');
+        const inputArea = document.getElementById('${DomIds.INPUT_AREA}');
+        const status = document.getElementById('${DomIds.STATUS}');
+        const statusText = document.getElementById('${DomIds.STATUS_TEXT}');
+        const submitBtn = document.getElementById('${DomIds.SUBMIT_BTN}');
+        const backBtn = document.getElementById('${DomIds.BACK_BTN}');
 
         let currentQuestionData = null;
 
