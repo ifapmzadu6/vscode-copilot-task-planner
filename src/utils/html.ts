@@ -17,18 +17,3 @@ export function escapeHtml(text: string): string {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
-
-/**
- * Unescapes HTML entities back to their original characters.
- *
- * @param html - The HTML string to unescape
- * @returns The unescaped string
- */
-export function unescapeHtml(html: string): string {
-    return html
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#039;/g, "'");
-}

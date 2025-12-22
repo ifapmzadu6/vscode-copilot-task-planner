@@ -7,7 +7,7 @@ import { buildAnalyzeWorkspacePrompt } from '../prompts/templates';
  * Service for analyzing workspace context.
  * Extracts relevant project information for task planning.
  */
-export class WorkspaceAnalyzer {
+export class WorkspaceAnalysisService {
     /**
      * Analyzes the workspace to provide context for the given task request.
      *

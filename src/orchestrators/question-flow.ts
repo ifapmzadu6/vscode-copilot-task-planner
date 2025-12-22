@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { Config } from '../constants/config';
+import { RuntimeConfig } from '../constants/runtime';
 import { Logger } from '../utils/logger';
 import { safePostMessage, createPanelPromise } from '../utils/webview';
 import { MessageHandlerBuilder } from '../utils/message-handler-builder';
-import { QuestionEngine, QuestionContext } from '../services';
+import { QuestionGeneratorService, QuestionContext } from '../services';
 import {
     Question,
     CollectedAnswer,
@@ -38,10 +38,10 @@ export interface QuestionFlowOptions {
  * Manages the iterative Q&A process with back navigation support.
  */
 export class QuestionFlowOrchestrator {
-    private readonly questionEngine: QuestionEngine;
+    private readonly questionService: QuestionGeneratorService;
 
-    constructor(questionEngine?: QuestionEngine) {
-        this.questionEngine = questionEngine ?? new QuestionEngine();
+    constructor(questionService?: QuestionGeneratorService) {
+        this.questionService = questionService ?? new QuestionGeneratorService();
     }
 
     /**
@@ -54,7 +54,7 @@ export class QuestionFlowOrchestrator {
         const { panel, userRequest, context, toolInvocationToken, token } = options;
 
         Logger.log('Starting question flow...');
-        const ctx = this.questionEngine.createContext();
+        const ctx = this.questionService.createContext();
         let panelClosed = false;
 
         panel.onDidDispose(() => {
@@ -62,7 +62,7 @@ export class QuestionFlowOrchestrator {
             panelClosed = true;
         });
 
-        while (ctx.currentIndex < Config.MAX_QUESTIONS) {
+        while (ctx.currentIndex < RuntimeConfig.MAX_QUESTIONS) {
             Logger.log(`Question loop iteration ${ctx.currentIndex + 1}`);
 
             if (token.isCancellationRequested || panelClosed) {
@@ -71,7 +71,7 @@ export class QuestionFlowOrchestrator {
             }
 
             // Get or generate question
-            const questionResponse = await this.questionEngine.getOrGenerateQuestion(
+            const questionResponse = await this.questionService.getOrGenerateQuestion(
                 ctx,
                 userRequest,
                 context,
@@ -89,7 +89,7 @@ export class QuestionFlowOrchestrator {
                 panel,
                 questionResponse.question,
                 ctx.currentIndex + 1,
-                this.questionEngine.canGoBack(ctx),
+                this.questionService.canGoBack(ctx),
                 token
             );
 
@@ -99,16 +99,16 @@ export class QuestionFlowOrchestrator {
             }
 
             if (result === '__BACK__') {
-                if (this.questionEngine.goBack(ctx)) {
+                if (this.questionService.goBack(ctx)) {
                     safePostMessage(panel, { type: ExtensionMessage.REMOVE_LAST_QA });
                 }
                 continue;
             }
 
             // Store answer and update panel
-            this.questionEngine.storeAnswer(ctx, questionResponse.question.text, result);
+            this.questionService.storeAnswer(ctx, questionResponse.question.text, result);
             this.notifyQuestionAnswered(panel, ctx, questionResponse.question.text, result);
-            this.questionEngine.advance(ctx);
+            this.questionService.advance(ctx);
         }
 
         Logger.log(`Question flow finished. Collected ${ctx.answers.length} answers`);

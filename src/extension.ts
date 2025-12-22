@@ -4,10 +4,10 @@ import * as vscode from 'vscode';
 import { PlanToolInput } from './types/messages';
 
 // Import constants
-import { Config } from './constants/config';
+import { RuntimeConfig } from './constants/runtime';
 
 // Import services
-import { WorkspaceAnalyzer } from './services';
+import { WorkspaceAnalysisService } from './services';
 
 // Import orchestrators
 import { QuestionFlowOrchestrator, PlanConfirmationOrchestrator } from './orchestrators';
@@ -25,7 +25,7 @@ import { WebviewPanelManager } from './utils/webview';
  * Uses runSubagent + single persistent Webview for dynamic interactive question flow
  */
 class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
-    private readonly workspaceAnalyzer = new WorkspaceAnalyzer();
+    private readonly workspaceAnalyzer = new WorkspaceAnalysisService();
     private readonly questionFlow = new QuestionFlowOrchestrator();
     private readonly planConfirmation = new PlanConfirmationOrchestrator();
 
@@ -153,7 +153,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
 export function activate(context: vscode.ExtensionContext) {
     Logger.log('Extension activated');
     const tool = new TaskPlannerTool();
-    context.subscriptions.push(vscode.lm.registerTool(Config.TOOL_NAMES.PLAN, tool));
+    context.subscriptions.push(vscode.lm.registerTool(RuntimeConfig.TOOL_NAMES.PLAN, tool));
 }
 
 export function deactivate() {

@@ -1,4 +1,6 @@
-import { Config } from '../constants/config';
+import { RuntimeConfig } from '../constants/runtime';
+
+const LOG_PREFIX = RuntimeConfig.LOGGING.PREFIX;
 
 /**
  * Centralized logging utility for the Task Planner extension.
@@ -11,7 +13,7 @@ export class Logger {
      * @param args - Additional arguments to log
      */
     static log(message: string, ...args: unknown[]): void {
-        console.log(`${Config.LOG_PREFIX} ${message}`, ...args);
+        console.log(`${LOG_PREFIX} ${message}`, ...args);
     }
 
     /**
@@ -20,7 +22,7 @@ export class Logger {
      * @param error - The error object or additional context
      */
     static error(message: string, error?: unknown): void {
-        console.error(`${Config.LOG_PREFIX} ${message}`, error);
+        console.error(`${LOG_PREFIX} ${message}`, error);
     }
 
     /**
@@ -29,7 +31,7 @@ export class Logger {
      * @param args - Additional arguments to log
      */
     static warn(message: string, ...args: unknown[]): void {
-        console.warn(`${Config.LOG_PREFIX} ${message}`, ...args);
+        console.warn(`${LOG_PREFIX} ${message}`, ...args);
     }
 
     /**
@@ -40,7 +42,7 @@ export class Logger {
      */
     static debug(message: string, ...args: unknown[]): void {
         if (process.env.NODE_ENV === 'development') {
-            console.debug(`${Config.LOG_PREFIX} [DEBUG] ${message}`, ...args);
+            console.debug(`${LOG_PREFIX} [DEBUG] ${message}`, ...args);
         }
     }
 }

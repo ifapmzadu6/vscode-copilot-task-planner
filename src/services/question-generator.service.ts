@@ -25,7 +25,7 @@ export interface QuestionContext {
 /**
  * Service for generating and managing clarifying questions.
  */
-export class QuestionEngine {
+export class QuestionGeneratorService {
     /**
      * Creates a new question context.
      * @returns A fresh question context

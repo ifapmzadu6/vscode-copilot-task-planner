@@ -14,14 +14,3 @@ export function disposeAll(disposables: vscode.Disposable[]): void {
     disposables.forEach(d => d.dispose());
     disposables.length = 0;
 }
-
-/**
- * Creates a disposable that runs a callback when disposed.
- * Useful for cleanup operations.
- *
- * @param callback - Function to run on disposal
- * @returns A disposable that runs the callback
- */
-export function createDisposable(callback: () => void): vscode.Disposable {
-    return { dispose: callback };
-}
