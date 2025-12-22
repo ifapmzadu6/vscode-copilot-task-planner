@@ -13,7 +13,3 @@ export {
     PlanReviserService,
     TaskRegistrationService,
 } from './plan';
-
-// Facade for backwards compatibility
-/** @deprecated Use individual services from './plan' instead */
-export { PlanGenerator } from './plan-generator';

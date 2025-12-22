@@ -1,3 +1,5 @@
+import { DomIds, StatusMessages } from '../../../constants/ui';
+
 /**
  * Generates event listeners for Q&A interactions
  */
@@ -32,16 +34,16 @@ export function generateQuestionEventListeners(): string {
 export function generatePlanEventListeners(): string {
     return `
         // Approve plan button handler
-        document.getElementById('approveBtn').addEventListener('click', () => {
+        document.getElementById('${DomIds.APPROVE_BTN}').addEventListener('click', () => {
             vscode.postMessage({ type: 'approvePlan' });
         });
 
         // Revise plan button handler
-        document.getElementById('reviseBtn').addEventListener('click', () => {
-            const feedbackSection = document.getElementById('feedback-section');
-            const feedbackText = document.getElementById('feedback-text');
-            const feedbackError = document.getElementById('feedback-error');
-            const reviseBtn = document.getElementById('reviseBtn');
+        document.getElementById('${DomIds.REVISE_BTN}').addEventListener('click', () => {
+            const feedbackSection = document.getElementById('${DomIds.FEEDBACK_SECTION}');
+            const feedbackText = document.getElementById('${DomIds.FEEDBACK_TEXT}');
+            const feedbackError = document.getElementById('${DomIds.FEEDBACK_ERROR}');
+            const reviseBtn = document.getElementById('${DomIds.REVISE_BTN}');
 
             if (feedbackSection.style.display === 'none') {
                 // Show feedback section and change button text
@@ -56,7 +58,7 @@ export function generatePlanEventListeners(): string {
                     vscode.postMessage({ type: 'revisePlan', feedback: feedback });
                 } else {
                     // Show error for empty feedback
-                    feedbackError.textContent = 'Please enter your revision request.';
+                    feedbackError.textContent = '${StatusMessages.ENTER_REVISION}';
                     feedbackError.style.display = 'block';
                     feedbackText.focus();
                 }
@@ -64,17 +66,17 @@ export function generatePlanEventListeners(): string {
         });
 
         // Cancel plan button handler
-        document.getElementById('planCancelBtn').addEventListener('click', () => {
+        document.getElementById('${DomIds.PLAN_CANCEL_BTN}').addEventListener('click', () => {
             vscode.postMessage({ type: 'cancel' });
         });
 
         // Cancel feedback button handler
-        document.getElementById('feedbackCancelBtn').addEventListener('click', () => {
+        document.getElementById('${DomIds.FEEDBACK_CANCEL_BTN}').addEventListener('click', () => {
             resetFeedbackSection();
         });
 
         // Language select handler
-        document.getElementById('lang-select').addEventListener('change', (e) => {
+        document.getElementById('${DomIds.LANG_SELECT}').addEventListener('change', (e) => {
             const lang = e.target.value;
             if (lang === 'English') {
                 vscode.postMessage({ type: 'showOriginal' });

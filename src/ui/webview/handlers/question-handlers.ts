@@ -1,3 +1,5 @@
+import { StatusMessages } from '../../../constants/ui';
+
 /**
  * Generates message handlers for Q&A related messages
  */
@@ -38,7 +40,7 @@ export function generateQuestionHandlers(): string {
 
             currentQuestion.style.display = 'none';
             status.style.display = 'block';
-            statusText.textContent = 'Thinking of next question...';
+            statusText.textContent = '${StatusMessages.THINKING_NEXT_QUESTION}';
         }
         // Handle back navigation (remove last Q&A)
         else if (message.type === 'removeLastQA') {
