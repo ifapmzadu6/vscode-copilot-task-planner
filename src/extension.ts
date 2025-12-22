@@ -33,7 +33,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
         options: vscode.LanguageModelToolInvocationOptions<PlanToolInput>,
         token: vscode.CancellationToken
     ): Promise<vscode.LanguageModelToolResult> {
-        const { userRequest, context } = options.input;
+        const { userRequest, context, todoToolName } = options.input;
         Logger.log(`invoke called with userRequest: ${userRequest}`);
 
         const cleanRequest = this.cleanUserRequest(userRequest);
@@ -91,7 +91,8 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
             await this.planConfirmation.registerTasks(
                 planResult.plan,
                 options.toolInvocationToken,
-                token
+                token,
+                todoToolName
             );
 
             // Cleanup and return

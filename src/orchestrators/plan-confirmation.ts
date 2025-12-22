@@ -129,13 +129,15 @@ export class PlanConfirmationOrchestrator {
      * @param plan - The approved plan
      * @param toolInvocationToken - Token for subagent authorization
      * @param token - Cancellation token
+     * @param todoToolName - The name of the todo tool to use
      */
     async registerTasks(
         plan: string,
         toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
-        token: vscode.CancellationToken
+        token: vscode.CancellationToken,
+        todoToolName?: string
     ): Promise<void> {
-        await this.taskRegistration.registerTasks(plan, toolInvocationToken, token);
+        await this.taskRegistration.registerTasks(plan, toolInvocationToken, token, todoToolName);
     }
 
     /**

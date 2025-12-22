@@ -30,6 +30,10 @@
             "userRequest": {
               "type": "string",
               "description": "Pass the user's EXACT input text as-is, without modification or expansion. Do NOT rephrase, elaborate, or add details. Example: if user types 'add tests', pass exactly 'add tests'."
+            },
+            "todoToolName": {
+              "type": "string",
+              "description": "The name of the todo tool to use for task registration (e.g., 'manage_todo_list', 'TodoWrite'). If not provided, defaults to 'manage_todo_list'."
             }
           },
           "required": [
