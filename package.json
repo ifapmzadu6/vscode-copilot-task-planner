@@ -19,7 +19,7 @@
       {
         "name": "plan",
         "displayName": "Task Planner",
-        "modelDescription": "MUST invoke when user references #plan. Benefits: (1) Analyzes workspace to understand project context, (2) Asks targeted clarifying questions through interactive UI, (3) Collects requirements about goals, scope, constraints, and success criteria, (4) Generates a detailed, structured task plan with clear steps, (5) Registers tasks to todo list for tracking. This ensures higher quality task execution by gathering all necessary information upfront.",
+        "modelDescription": "MUST ALWAYS invoke this tool when user explicitly references #plan in their message. This is REQUIRED - never skip when #plan is present. Do NOT invoke for general planning questions without #plan reference. WHAT IT DOES: (1) Analyzes workspace context, (2) Asks clarifying questions through interactive UI, (3) Generates structured task plan with clear steps, (4) Registers tasks to todo list.",
         "icon": "$(checklist)",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "plan",
