@@ -30,7 +30,6 @@ export class TaskRegistrationService {
             toolInvocationToken,
             token,
             {
-                safe: true,
                 onError: (error) => {
                     Logger.error('Failed to register tasks to todo list:', error);
                 }

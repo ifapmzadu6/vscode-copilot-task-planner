@@ -28,7 +28,7 @@ export class WorkspaceAnalysisService {
             buildAnalyzeWorkspacePrompt(userRequest),
             toolInvocationToken,
             token,
-            { safe: true, defaultValue: '' }
+            { defaultValue: '' }
         );
 
         Logger.log(`Workspace context length: ${workspaceContext.length}`);
