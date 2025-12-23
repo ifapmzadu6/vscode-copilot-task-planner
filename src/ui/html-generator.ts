@@ -46,7 +46,7 @@ function generateHtmlStructure(userRequest: string): string {
                 </select>
             </div>
         </div>
-        <div id="${DomIds.PLAN_CONTENT}" style="white-space: pre-wrap; font-size: 12px; max-height: 400px; overflow-y: auto; background: var(--vscode-editor-background); padding: 12px; border-radius: 4px; margin-bottom: 12px;"></div>
+        <div id="${DomIds.PLAN_CONTENT}" style="white-space: pre-wrap; font-size: 12px; background: var(--vscode-editor-background); padding: 12px; border-radius: 4px; margin-bottom: 12px;"></div>
         <div id="${DomIds.FEEDBACK_SECTION}" style="display: none; margin-bottom: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                 <div class="question-label" style="margin-bottom: 0;">Revision Request</div>
