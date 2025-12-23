@@ -125,7 +125,11 @@ export async function invokeSubagent(
             }
         }
 
-        throw lastError!;
+        if (lastError) {
+            throw lastError;
+        }
+
+        throw new Error(`Subagent "${description}" failed without providing an error`);
     };
 
     try {
