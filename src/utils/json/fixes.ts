@@ -3,7 +3,7 @@ import { Logger } from '../logger';
 /**
  * JSON fix strategy definition
  */
-export interface JsonFix {
+interface JsonFix {
     name: string;
     fix: (json: string) => string;
 }
@@ -11,7 +11,7 @@ export interface JsonFix {
 /**
  * Common JSON fixes to apply when parsing fails
  */
-export const JSON_FIXES: JsonFix[] = [
+const JSON_FIXES: JsonFix[] = [
     {
         name: 'trailing commas',
         fix: (json) => json

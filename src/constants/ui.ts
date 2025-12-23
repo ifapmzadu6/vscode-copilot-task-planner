@@ -86,7 +86,3 @@ export const UIConfig = {
     },
 } as const;
 
-export type UIConfigType = typeof UIConfig;
-export type DomIdsType = typeof DomIds;
-export type StatusMessagesType = typeof StatusMessages;
-export type ButtonLabelsType = typeof ButtonLabels;

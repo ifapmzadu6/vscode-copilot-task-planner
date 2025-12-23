@@ -5,7 +5,7 @@ import { Logger } from './logger';
 /**
  * Error thrown when a subagent invocation times out
  */
-export class SubagentTimeoutError extends Error {
+class SubagentTimeoutError extends Error {
     constructor(description: string, timeoutMs: number) {
         super(`Subagent "${description}" timed out after ${timeoutMs}ms`);
         this.name = 'SubagentTimeoutError';

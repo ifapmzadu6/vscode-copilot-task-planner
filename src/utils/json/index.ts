@@ -4,4 +4,4 @@
  */
 
 export { parseJsonWithRetry } from './parser';
-export { JSON_FIXES, tryFixJson, type JsonFix } from './fixes';
+export { tryFixJson } from './fixes';
