@@ -24,6 +24,12 @@ export interface SubagentOptions {
     defaultValue?: string;
     /** Callback function called when an error occurs in safe mode */
     onError?: (error: Error) => void;
+    /** Number of retry attempts on failure (default: 0) */
+    retries?: number;
+    /** Initial delay between retries in milliseconds (default: 1000). Uses exponential backoff. */
+    retryDelayMs?: number;
+    /** Custom function to determine if an error should trigger a retry */
+    shouldRetry?: (error: Error, attempt: number) => boolean;
 }
 
 /**
@@ -47,7 +53,10 @@ export async function invokeSubagent(
         timeoutMs = RuntimeConfig.SUBAGENT_TIMEOUT_MS,
         safe = false,
         defaultValue = '',
-        onError
+        onError,
+        retries = 0,
+        retryDelayMs = 1000,
+        shouldRetry = () => true
     } = options;
 
     Logger.log(`invokeSubagent: ${description}`);
@@ -85,9 +94,46 @@ export async function invokeSubagent(
         return Promise.race([invocationPromise, timeoutPromise]);
     };
 
+    const executeWithRetry = async (): Promise<string> => {
+        let lastError: Error | undefined;
+
+        for (let attempt = 0; attempt <= retries; attempt++) {
+            // Check for cancellation before each attempt
+            if (token.isCancellationRequested) {
+                throw new Error('Operation cancelled');
+            }
+
+            try {
+                return await execute();
+            } catch (error) {
+                lastError = error instanceof Error ? error : new Error(String(error));
+
+                // Don't retry if this was the last attempt
+                if (attempt >= retries) {
+                    break;
+                }
+
+                // Check if we should retry this error
+                if (!shouldRetry(lastError, attempt)) {
+                    Logger.log(`Subagent "${description}" - not retrying: ${lastError.message}`);
+                    break;
+                }
+
+                // Calculate delay with exponential backoff
+                const delay = retryDelayMs * Math.pow(2, attempt);
+                Logger.log(`Subagent "${description}" failed (attempt ${attempt + 1}/${retries + 1}), retrying in ${delay}ms: ${lastError.message}`);
+
+                // Wait before retrying
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+
+        throw lastError!;
+    };
+
     if (safe) {
         try {
-            const result = await execute();
+            const result = await executeWithRetry();
             return result || defaultValue;
         } catch (error) {
             Logger.error(`${description} error:`, error);
@@ -98,5 +144,5 @@ export async function invokeSubagent(
         }
     }
 
-    return execute();
+    return executeWithRetry();
 }
