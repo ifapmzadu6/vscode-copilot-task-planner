@@ -54,7 +54,7 @@ export async function invokeSubagent(
         safe = false,
         defaultValue = '',
         onError,
-        retries = 0,
+        retries = 3,
         retryDelayMs = 1000,
         shouldRetry = () => true
     } = options;
