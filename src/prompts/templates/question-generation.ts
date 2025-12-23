@@ -42,17 +42,26 @@ Based on the current state, ask about ONE uncovered topic using this priority:
    - What does "success" look like to the user?
    - How will they know the task is complete?
 
-3. **Implicit Expectations** (ask if basics are covered)
-   - What assumptions might the user have that they haven't stated?
-   - Are there unspoken requirements based on the project context?
-
-4. **Scope & Priorities** (ask to clarify boundaries)
+3. **Scope & Priorities** (ask to clarify boundaries)
    - What is the MOST important aspect to get right?
    - What can be simplified or deferred?
 
-5. **Constraints & Preferences** (ask for implementation guidance)
-   - Are there technical approaches they prefer or want to avoid?
-   - Time, complexity, or quality trade-offs?
+4. **Technical Approach** (ask for implementation details)
+   - Which existing patterns or components should be reused?
+   - Are there specific libraries, APIs, or architectures to use or avoid?
+   - How should this integrate with existing code?
+
+5. **Edge Cases & Error Handling** (ask about robustness)
+   - What edge cases or error scenarios should be handled?
+   - How should failures be handled or reported?
+
+6. **Testing & Verification** (ask about quality requirements)
+   - What level of testing is expected (unit, integration, e2e)?
+   - How should the implementation be verified as working?
+
+7. **Constraints & Preferences** (ask for final guidance)
+   - Are there performance, security, or compatibility requirements?
+   - Any other constraints or preferences not yet covered?
 
 ### Question Design Principles
 - Ask questions that reveal HIDDEN intent, not just surface requirements

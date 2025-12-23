@@ -14,7 +14,7 @@ export const RuntimeConfig = {
     MIN_QUESTIONS: 1,
 
     /** Maximum number of questions to ask during Q&A phase */
-    MAX_QUESTIONS: 5,
+    MAX_QUESTIONS: 7,
 
     /** Tool names used for invocations */
     TOOL_NAMES: {
