@@ -23,7 +23,7 @@ export function generateComponentStyles(): string {
             padding: 8px 12px;
             margin-bottom: 16px;
             font-size: 12px;
-            color: var(--vscode-descriptionForeground);
+            color: var(--vscode-foreground);
         }
         .task-info strong { color: var(--vscode-foreground); }
         .qa-history { margin-bottom: 12px; }
