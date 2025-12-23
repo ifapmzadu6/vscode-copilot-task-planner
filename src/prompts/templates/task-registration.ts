@@ -14,17 +14,30 @@ const DEFAULT_TODO_TOOL_NAME = 'manage_todo_list';
  */
 export function buildRegisterTasksPrompt(refinedPrompt: string, todoToolName?: string): string {
     const toolName = todoToolName ?? DEFAULT_TODO_TOOL_NAME;
-    return `You are a task registration assistant.
+    return `You are a task extraction assistant.
 
-Extract the implementation steps from the following task plan and register each step as a todo item using the ${toolName} tool.
+Extract the implementation steps from the following task plan and output them as a structured task list.
 
 ## Task Plan
 ${refinedPrompt}
 
 ## Instructions
 1. Extract all numbered steps from the "## Steps" section
-2. Use the ${toolName} tool to add each step as a todo item
-3. After registering, confirm completion
+2. Output each step as a clear, actionable task item
+3. Do NOT call any tools directly - just output the extracted tasks
 
-Do NOT output the full plan in chat. Just register the todos and confirm.`;
+## Output Format
+Output the tasks in the following format, then add instructions for the user:
+
+---
+## Tasks to Register
+
+1. [First task]
+2. [Second task]
+...
+
+---
+
+Please register these tasks using the ${toolName} tool and proceed with the implementation.
+---`;
 }
