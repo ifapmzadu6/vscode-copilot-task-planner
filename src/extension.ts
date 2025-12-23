@@ -42,17 +42,17 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
         const webviewManager = new WebviewPanelManager();
 
         try {
-            // Step 1: Analyze workspace context
-            Logger.log('Step 1: Analyzing workspace context...');
+            // Step 1: Create persistent Webview panel (show immediately)
+            Logger.log('Step 1: Creating Webview panel...');
+            const panel = webviewManager.createPanel(cleanRequest);
+
+            // Step 2: Analyze workspace context
+            Logger.log('Step 2: Analyzing workspace context...');
             const fullContext = await this.workspaceAnalyzer.analyze(
                 cleanRequest,
                 options.toolInvocationToken,
                 token
             );
-
-            // Step 2: Create persistent Webview panel
-            Logger.log('Step 2: Creating Webview panel...');
-            const panel = webviewManager.createPanel(cleanRequest);
 
             // Step 3: Run question flow
             Logger.log('Step 3: Running question flow...');
