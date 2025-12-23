@@ -69,8 +69,6 @@ export const UIConfig = {
 
     /** Dimensions */
     DIMENSIONS: {
-        /** Plan content max height in pixels */
-        PLAN_MAX_HEIGHT: 400,
         /** Body padding in pixels */
         BODY_PADDING: 16,
         /** Spinner size in pixels */
