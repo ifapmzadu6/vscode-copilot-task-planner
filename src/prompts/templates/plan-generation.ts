@@ -90,17 +90,29 @@ The agent should check these at the end to confirm success.]
 [Continue with remaining steps...]
 
 ## Final Verification
-Run these commands to confirm the task is complete:
+
+### 1. Code Quality Checks
 ${bq}${bq}${bq}bash
-# Build check
+# Build - must complete without errors
 npm run build
 
-# Test check
+# Tests - all must pass
 npm test
 
-# Lint check (if applicable)
+# Lint - no errors (warnings OK)
 npm run lint
 ${bq}${bq}${bq}
+
+### 2. Functional Verification
+[Task-specific verification that the feature/fix actually works]
+- [Manual or automated check 1: e.g., "Run the app and verify login flow works"]
+- [Manual or automated check 2: e.g., "Call the API endpoint and verify response"]
+- [Include specific test commands, curl examples, or steps to verify]
+
+### 3. Requirements Checklist
+Verify each original requirement from the user request:
+- [ ] [Requirement 1 from user request]: [How to verify it's met]
+- [ ] [Requirement 2 from user request]: [How to verify it's met]
 
 ## Error Recovery
 If you encounter issues:
