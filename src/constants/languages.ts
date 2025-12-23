@@ -30,12 +30,3 @@ export const SUPPORTED_LANGUAGES: readonly LanguageOption[] = [
     { value: 'Czech', label: 'Čeština' },
 ] as const;
 
-/**
- * The original language value (English).
- */
-export const ORIGINAL_LANGUAGE = SUPPORTED_LANGUAGES[0].value;
-
-/**
- * Type representing valid language values.
- */
-export type SupportedLanguage = typeof SUPPORTED_LANGUAGES[number]['value'];

@@ -28,5 +28,3 @@ export const RuntimeConfig = {
         PREFIX: '[TaskPlanner]',
     },
 } as const;
-
-export type RuntimeConfigType = typeof RuntimeConfig;
