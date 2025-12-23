@@ -114,6 +114,7 @@ export class QuestionGeneratorService {
         if (ctx.currentIndex > 0) {
             ctx.currentIndex--;
             ctx.answers.pop();
+            ctx.history.pop();
             return true;
         }
         return false;
