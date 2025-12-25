@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { RuntimeConfig } from '../constants/runtime';
 import { Logger } from './logger';
+import { getTempFileManager } from './temp-file-manager';
 
 /**
  * Error thrown when a subagent invocation times out
@@ -10,6 +11,18 @@ class SubagentTimeoutError extends Error {
         super(`Subagent "${description}" timed out after ${timeoutMs}ms`);
         this.name = 'SubagentTimeoutError';
     }
+}
+
+/**
+ * Options for file-based output from subagent
+ */
+export interface FileOutputOptions {
+    /** Enable file-based output to bypass token limits */
+    enabled: boolean;
+    /** Prefix for the temp file name (default: 'subagent-output') */
+    filePrefix?: string;
+    /** File extension (default: 'md') */
+    fileExtension?: string;
 }
 
 /**
@@ -28,6 +41,11 @@ export interface SubagentOptions {
     retryDelayMs?: number;
     /** Custom function to determine if an error should trigger a retry */
     shouldRetry?: (error: Error, attempt: number) => boolean;
+    /**
+     * Options for writing output to a file instead of returning via chat.
+     * This helps bypass output token limits for detailed responses.
+     */
+    fileOutput?: FileOutputOptions;
 }
 
 /**
@@ -40,6 +58,25 @@ export interface SubagentOptions {
  * @param options - Additional options for timeout and error handling
  * @returns The text response from the subagent, or defaultValue on error
  */
+/**
+ * Builds the file output instruction to append to the prompt
+ */
+function buildFileOutputInstruction(outputFilePath: string): string {
+    return `
+
+=== OUTPUT INSTRUCTION ===
+IMPORTANT: To provide detailed output without token limits, write your complete response to this file:
+${outputFilePath}
+
+CONSTRAINTS:
+- Write ALL detailed content to the file above using the write_file tool
+- Your chat response should ONLY contain a brief confirmation (e.g., "Output written to file")
+- The file content will be read by the system after you finish
+- Do NOT include the full content in your chat response
+===========================
+`;
+}
+
 export async function invokeSubagent(
     description: string,
     prompt: string,
@@ -53,10 +90,28 @@ export async function invokeSubagent(
         onError,
         retries = 3,
         retryDelayMs = 1000,
-        shouldRetry = () => true
+        shouldRetry = () => true,
+        fileOutput
     } = options;
 
     Logger.log(`invokeSubagent: ${description}`);
+
+    // Prepare file output if enabled
+    let outputFilePath: string | undefined;
+    let modifiedPrompt = prompt;
+
+    if (fileOutput?.enabled) {
+        const tempFileManager = getTempFileManager();
+        if (tempFileManager.isInitialized()) {
+            const prefix = fileOutput.filePrefix ?? 'subagent-output';
+            const extension = fileOutput.fileExtension ?? 'md';
+            outputFilePath = tempFileManager.generateTempFilePath(prefix, extension);
+            modifiedPrompt = prompt + buildFileOutputInstruction(outputFilePath);
+            Logger.log(`File output enabled, path: ${outputFilePath}`);
+        } else {
+            Logger.log('TempFileManager not initialized, falling back to chat response');
+        }
+    }
 
     const execute = async (): Promise<string> => {
         // Create timeout promise
@@ -71,7 +126,7 @@ export async function invokeSubagent(
             const result = await vscode.lm.invokeTool(
                 RuntimeConfig.TOOL_NAMES.SUBAGENT,
                 {
-                    input: { description, prompt },
+                    input: { description, prompt: modifiedPrompt },
                     toolInvocationToken
                 },
                 token
@@ -83,7 +138,22 @@ export async function invokeSubagent(
                     responseText += part.value;
                 }
             }
-            Logger.log(`invokeSubagent result length: ${responseText.length}`);
+            Logger.log(`invokeSubagent chat response length: ${responseText.length}`);
+
+            // If file output was requested, try to read from file
+            if (outputFilePath) {
+                const tempFileManager = getTempFileManager();
+                const fileContent = await tempFileManager.readTempFile(outputFilePath);
+                if (fileContent) {
+                    Logger.log(`Read file output: ${fileContent.length} chars`);
+                    // Clean up the temp file after reading
+                    await tempFileManager.deleteTempFile(outputFilePath);
+                    return fileContent;
+                } else {
+                    Logger.log('File output not found, using chat response as fallback');
+                }
+            }
+
             return responseText;
         })();
 

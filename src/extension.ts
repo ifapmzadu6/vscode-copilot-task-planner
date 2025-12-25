@@ -15,6 +15,7 @@ import { QuestionFlowOrchestrator, PlanConfirmationOrchestrator } from './orches
 // Import utilities
 import { Logger } from './utils/logger';
 import { WebviewPanelManager } from './utils/webview';
+import { getTempFileManager } from './utils/temp-file-manager';
 
 // ============================================================
 // Task Planner Tool
@@ -159,8 +160,18 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
 // Extension Activation
 // ============================================================
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
     Logger.log('Extension activated');
+
+    // Initialize TempFileManager with extension context
+    const tempFileManager = getTempFileManager();
+    await tempFileManager.initialize(context);
+
+    // Clean up old temp files on activation (files older than 24 hours)
+    tempFileManager.cleanupOldFiles().catch((err: unknown) => {
+        Logger.error('Failed to cleanup old temp files', err);
+    });
+
     const tool = new TaskPlannerTool();
     context.subscriptions.push(vscode.lm.registerTool(RuntimeConfig.TOOL_NAMES.PLAN, tool));
 }
