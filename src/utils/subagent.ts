@@ -4,21 +4,9 @@ import { Logger } from './logger';
 import { getTempFileManager } from './temp-file-manager';
 
 /**
- * Error thrown when a subagent invocation times out
- */
-class SubagentTimeoutError extends Error {
-    constructor(description: string, timeoutMs: number) {
-        super(`Subagent "${description}" timed out after ${timeoutMs}ms`);
-        this.name = 'SubagentTimeoutError';
-    }
-}
-
-/**
  * Options for subagent invocation
  */
 export interface SubagentOptions {
-    /** Timeout in milliseconds (default: 30000) */
-    timeoutMs?: number;
     /** Default value to return when an error occurs */
     defaultValue?: string;
     /** Callback function called when an error occurs */
@@ -62,7 +50,6 @@ export async function invokeSubagent(
     options: SubagentOptions = {}
 ): Promise<string> {
     const {
-        timeoutMs = RuntimeConfig.SUBAGENT_TIMEOUT_MS,
         defaultValue = '',
         onError,
         retries = 3,
@@ -85,51 +72,39 @@ export async function invokeSubagent(
         : prompt;
 
     const execute = async (): Promise<string> => {
-        // Create timeout promise
-        const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => {
-                reject(new SubagentTimeoutError(description, timeoutMs));
-            }, timeoutMs);
-        });
+        // Invoke the subagent (no timeout - will run until completion or cancellation)
+        const result = await vscode.lm.invokeTool(
+            RuntimeConfig.TOOL_NAMES.SUBAGENT,
+            {
+                input: { description, prompt: modifiedPrompt },
+                toolInvocationToken
+            },
+            token
+        );
 
-        // Create the actual invocation promise
-        const invocationPromise = (async () => {
-            const result = await vscode.lm.invokeTool(
-                RuntimeConfig.TOOL_NAMES.SUBAGENT,
-                {
-                    input: { description, prompt: modifiedPrompt },
-                    toolInvocationToken
-                },
-                token
-            );
-
-            let responseText = '';
-            for (const part of result.content) {
-                if (part instanceof vscode.LanguageModelTextPart) {
-                    responseText += part.value;
-                }
+        let responseText = '';
+        for (const part of result.content) {
+            if (part instanceof vscode.LanguageModelTextPart) {
+                responseText += part.value;
             }
-            Logger.log(`invokeSubagent chat response length: ${responseText.length}`);
+        }
+        Logger.log(`invokeSubagent chat response length: ${responseText.length}`);
 
-            // If file output was requested, read from file
-            if (outputFilePath) {
-                const fileContent = await tempFileManager.readTempFile(outputFilePath);
-                if (fileContent) {
-                    Logger.log(`Read file output: ${fileContent.length} chars`);
-                    return [
-                        `The implementation plan has been saved to: ${outputFilePath}`,
-                        '',
-                        'Read this file now using read_file tool and execute each step of the plan.'
-                    ].join('\n');
-                }
-                throw new Error(`Failed to read output file: ${outputFilePath}`);
+        // If file output was requested, read from file
+        if (outputFilePath) {
+            const fileContent = await tempFileManager.readTempFile(outputFilePath);
+            if (fileContent) {
+                Logger.log(`Read file output: ${fileContent.length} chars`);
+                return [
+                    `The implementation plan has been saved to: ${outputFilePath}`,
+                    '',
+                    'Read this file now using read_file tool and execute each step of the plan.'
+                ].join('\n');
             }
+            throw new Error(`Failed to read output file: ${outputFilePath}`);
+        }
 
-            return responseText;
-        })();
-
-        // Race between invocation and timeout
-        return Promise.race([invocationPromise, timeoutPromise]);
+        return responseText;
     };
 
     const executeWithRetry = async (): Promise<string> => {
