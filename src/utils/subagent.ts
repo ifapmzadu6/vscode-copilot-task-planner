@@ -48,13 +48,17 @@ function buildFileOutputInstruction(outputFilePath: string): string {
     return `
 
 === OUTPUT INSTRUCTION ===
-IMPORTANT: To provide detailed output without token limits, write your complete response to this file:
+To bypass output token limits, write your response incrementally to this file:
 ${outputFilePath}
 
+PROCESS:
+1. First, create the file with initial structure/header
+2. Then, append each section/element incrementally using write_file
+3. Continue appending until complete
+
 CONSTRAINTS:
-- Write ALL detailed content to the file above using the write_file tool
-- Your chat response should ONLY contain a brief confirmation (e.g., "Output written to file")
-- The file content will be read by the system after you finish
+- Use write_file tool multiple times to build the output incrementally
+- Your chat response should ONLY be a brief confirmation
 - Do NOT include the full content in your chat response
 ===========================
 `;
