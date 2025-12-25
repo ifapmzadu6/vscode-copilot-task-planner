@@ -33,9 +33,7 @@ export class PlanReviserService {
             token,
             {
                 fileOutput: {
-                    enabled: true,
-                    filePrefix: 'revised-plan',
-                    fileExtension: 'md'
+                    filePrefix: 'revised-plan'
                 }
             }
         );

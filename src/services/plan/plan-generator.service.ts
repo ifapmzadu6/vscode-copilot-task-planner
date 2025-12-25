@@ -37,9 +37,7 @@ export class PlanGeneratorService {
             token,
             {
                 fileOutput: {
-                    enabled: true,
-                    filePrefix: 'plan',
-                    fileExtension: 'md'
+                    filePrefix: 'plan'
                 }
             }
         );

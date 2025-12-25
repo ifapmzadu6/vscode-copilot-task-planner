@@ -14,11 +14,10 @@ class SubagentTimeoutError extends Error {
 }
 
 /**
- * Options for file-based output from subagent
+ * Options for file-based output from subagent.
+ * When specified, output will be written to a temp file to bypass token limits.
  */
 export interface FileOutputOptions {
-    /** Enable file-based output to bypass token limits */
-    enabled: boolean;
     /** Prefix for the temp file name (default: 'subagent-output') */
     filePrefix?: string;
     /** File extension (default: 'md') */
@@ -100,7 +99,7 @@ export async function invokeSubagent(
     let outputFilePath: string | undefined;
     let modifiedPrompt = prompt;
 
-    if (fileOutput?.enabled) {
+    if (fileOutput) {
         const tempFileManager = getTempFileManager();
         if (tempFileManager.isInitialized()) {
             const prefix = fileOutput.filePrefix ?? 'subagent-output';
