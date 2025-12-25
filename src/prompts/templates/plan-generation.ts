@@ -140,11 +140,38 @@ The agent should internalize these principles before starting.]
 
 ---
 
-[Continue with remaining steps, each including:
-- Thinking Guide (questions to consider before coding)
-- Watch Out For (specific pitfalls)
-- If Blocked (fallback or skip condition)
-- ➡️ Next (explicit transition to next step)]
+### Step 3: Self-Review - [Brief description of what's being reviewed]
+**Goal**: Verify implementation quality and catch issues early
+
+**Thinking Guide**:
+> Before proceeding further, take time to review what you've built
+> - Is the code following the patterns identified in "Codebase Patterns to Follow"?
+> - Are you avoiding the anti-patterns listed earlier?
+> - Would this code be maintainable by another developer?
+
+**Review Checklist**:
+- [ ] Code follows existing patterns from [reference file]
+- [ ] Error handling is comprehensive and consistent
+- [ ] No placeholder values or TODOs left unaddressed
+- [ ] TypeScript types are accurate (or equivalent for other languages)
+- [ ] Changes are minimal and focused (no scope creep)
+
+**Actions**:
+1. Re-read the code you just wrote with fresh eyes
+2. Compare implementation against similar existing code
+3. Run verification commands: [specific commands]
+4. Check for common mistakes specific to this task
+
+**If Issues Found**:
+- Document the issue clearly
+- Go back to the relevant step and fix
+- Re-run this review after fixing
+
+➡️ **Next**: If all checklist items pass, proceed to Step 4.
+
+---
+
+[Continue with remaining implementation steps, inserting additional review steps after every 2-3 implementation steps]
 
 ## Final Verification
 
@@ -253,6 +280,10 @@ ${mdBlock}
 - Include 3-10 steps depending on complexity
 - Order steps by dependency, then priority
 - Make steps atomic - one clear objective per step
+- **Insert Self-Review Steps**: After every 2-3 implementation steps, insert a dedicated review step
+  - Review steps verify quality before proceeding
+  - Include specific checklist items to review
+  - Allow the agent to catch issues early and self-correct
 
 ### Verification
 - Every step MUST have a verification method
@@ -274,5 +305,17 @@ ${mdBlock}
 - "Approach Rationale" must explain WHY this approach, not just WHAT
 - List at least 2 alternatives that were considered and why they were rejected
 - "Codebase Patterns" should cite specific files as examples
-- "Anti-patterns" should be specific to this task and codebase`;
+- "Anti-patterns" should be specific to this task and codebase
+
+### Self-Review Steps Integration
+CRITICAL: Insert self-review steps strategically throughout the plan:
+- After implementing 2-3 related features, insert a review step
+- After completing a major architectural change, insert a review step
+- Before moving to a new subsystem or module, insert a review step
+- Review steps should:
+  - Reference the "Codebase Patterns to Follow" and "Anti-patterns to Avoid"
+  - Include 4-7 specific checklist items relevant to what was just implemented
+  - Provide concrete verification commands (build, test, lint)
+  - Allow the agent to self-correct before proceeding
+- Benefits: Catches errors early, ensures quality, maintains forward momentum by preventing major rework later`;
 }
