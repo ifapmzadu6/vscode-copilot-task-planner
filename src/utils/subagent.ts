@@ -14,15 +14,6 @@ class SubagentTimeoutError extends Error {
 }
 
 /**
- * Options for file-based output from subagent.
- * When specified, output will be written to a temp file (.md) to bypass token limits.
- */
-export interface FileOutputOptions {
-    /** Prefix for the temp file name (default: 'subagent-output') */
-    filePrefix?: string;
-}
-
-/**
  * Options for subagent invocation
  */
 export interface SubagentOptions {
@@ -38,11 +29,6 @@ export interface SubagentOptions {
     retryDelayMs?: number;
     /** Custom function to determine if an error should trigger a retry */
     shouldRetry?: (error: Error, attempt: number) => boolean;
-    /**
-     * Options for writing output to a file instead of returning via chat.
-     * This helps bypass output token limits for detailed responses.
-     */
-    fileOutput?: FileOutputOptions;
 }
 
 /**
@@ -87,26 +73,22 @@ export async function invokeSubagent(
         onError,
         retries = 3,
         retryDelayMs = 1000,
-        shouldRetry = () => true,
-        fileOutput
+        shouldRetry = () => true
     } = options;
 
     Logger.log(`invokeSubagent: ${description}`);
 
-    // Prepare file output if enabled
-    let outputFilePath: string | undefined;
-    let modifiedPrompt = prompt;
+    // Prepare file output
+    const tempFileManager = getTempFileManager();
+    const outputFilePath = tempFileManager.isInitialized()
+        ? tempFileManager.generateTempFilePath('output')
+        : undefined;
+    const modifiedPrompt = outputFilePath
+        ? prompt + buildFileOutputInstruction(outputFilePath)
+        : prompt;
 
-    if (fileOutput) {
-        const tempFileManager = getTempFileManager();
-        if (tempFileManager.isInitialized()) {
-            const prefix = fileOutput.filePrefix ?? 'subagent-output';
-            outputFilePath = tempFileManager.generateTempFilePath(prefix);
-            modifiedPrompt = prompt + buildFileOutputInstruction(outputFilePath);
-            Logger.log(`File output enabled, path: ${outputFilePath}`);
-        } else {
-            Logger.log('TempFileManager not initialized, falling back to chat response');
-        }
+    if (outputFilePath) {
+        Logger.log(`File output path: ${outputFilePath}`);
     }
 
     const execute = async (): Promise<string> => {

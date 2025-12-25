@@ -30,12 +30,7 @@ export class PlanReviserService {
             'Revise plan based on feedback',
             prompt,
             toolInvocationToken,
-            token,
-            {
-                fileOutput: {
-                    filePrefix: 'revised-plan'
-                }
-            }
+            token
         );
 
         Logger.log(`Revised plan length: ${result.length}`);

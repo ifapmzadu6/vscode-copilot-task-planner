@@ -34,12 +34,7 @@ export class PlanGeneratorService {
             'Generate task prompt',
             prompt,
             toolInvocationToken,
-            token,
-            {
-                fileOutput: {
-                    filePrefix: 'plan'
-                }
-            }
+            token
         );
 
         if (!result) throw new Error('No response');
