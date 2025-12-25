@@ -116,7 +116,11 @@ export async function invokeSubagent(
                 const fileContent = await tempFileManager.readTempFile(outputFilePath);
                 if (fileContent) {
                     Logger.log(`Read file output: ${fileContent.length} chars`);
-                    return `${fileContent}\n\n---\nOutput file: \`${outputFilePath}\``;
+                    return [
+                        `The implementation plan has been saved to: ${outputFilePath}`,
+                        '',
+                        'Read this file now using read_file tool and execute each step of the plan.'
+                    ].join('\n');
                 }
                 throw new Error(`Failed to read output file: ${outputFilePath}`);
             }
