@@ -32,16 +32,6 @@ export interface SubagentOptions {
 }
 
 /**
- * Invokes a subagent with configurable timeout and error handling
- *
- * @param description - Short description of the subagent task
- * @param prompt - The prompt to send to the subagent
- * @param toolInvocationToken - The tool invocation token for authorization
- * @param token - Cancellation token
- * @param options - Additional options for timeout and error handling
- * @returns The text response from the subagent, or defaultValue on error
- */
-/**
  * Builds the file output instruction to append to the prompt
  */
 function buildFileOutputInstruction(outputFilePath: string): string {
@@ -84,6 +74,9 @@ export async function invokeSubagent(
 
     // Prepare file output
     const tempFileManager = getTempFileManager();
+    if (!tempFileManager.isInitialized()) {
+        Logger.error('TempFileManager not initialized - file output disabled');
+    }
     const outputFilePath = tempFileManager.isInitialized()
         ? tempFileManager.generateTempFilePath()
         : undefined;
@@ -123,19 +116,8 @@ export async function invokeSubagent(
                 const fileContent = await tempFileManager.readTempFile(outputFilePath);
                 if (fileContent) {
                     Logger.log(`Read file output: ${fileContent.length} chars`);
-                    // Don't delete the file - keep it for Copilot to reference
-                    // Append file reference message to the content
-                    const fileReferenceMessage = [
-                        '',
-                        '---',
-                        '**Note:** The detailed plan has been written to the file below.',
-                        'Please read this file to continue with the implementation.',
-                        '',
-                        `\`${outputFilePath}\``
-                    ].join('\n');
-                    return fileContent + fileReferenceMessage;
+                    return `${fileContent}\n\n---\nOutput file: \`${outputFilePath}\``;
                 }
-                // File output is required - throw error if file not found
                 throw new Error(`Failed to read output file: ${outputFilePath}`);
             }
 

@@ -160,16 +160,17 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
 // Extension Activation
 // ============================================================
 
-export async function activate(context: vscode.ExtensionContext) {
+export function activate(context: vscode.ExtensionContext) {
     Logger.log('Extension activated');
 
-    // Initialize TempFileManager with extension context
+    // Initialize TempFileManager (fire-and-forget)
     const tempFileManager = getTempFileManager();
-    await tempFileManager.initialize(context);
-
-    // Clean up old temp files on activation (files older than 24 hours)
-    tempFileManager.cleanupOldFiles().catch((err: unknown) => {
-        Logger.error('Failed to cleanup old temp files', err);
+    tempFileManager.initialize(context).then(() => {
+        tempFileManager.cleanupOldFiles().catch((err: unknown) => {
+            Logger.error('Failed to cleanup old temp files', err);
+        });
+    }).catch((err: unknown) => {
+        Logger.error('Failed to initialize TempFileManager', err);
     });
 
     const tool = new TaskPlannerTool();
