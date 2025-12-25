@@ -79,20 +79,20 @@ export class TempFileManager {
     /**
      * Generate a unique temp file path for a given purpose
      */
-    generateTempFilePath(prefix: string, extension = 'md'): string {
+    generateTempFilePath(prefix: string): string {
         const timestamp = Date.now();
         const random = Math.random().toString(36).substring(2, 8);
-        const filename = `${prefix}-${timestamp}-${random}.${extension}`;
+        const filename = `${prefix}-${timestamp}-${random}.md`;
         return vscode.Uri.joinPath(this.getTempDirectoryUri(), filename).fsPath;
     }
 
     /**
      * Generate a temp file URI
      */
-    generateTempFileUri(prefix: string, extension = 'md'): vscode.Uri {
+    generateTempFileUri(prefix: string): vscode.Uri {
         const timestamp = Date.now();
         const random = Math.random().toString(36).substring(2, 8);
-        const filename = `${prefix}-${timestamp}-${random}.${extension}`;
+        const filename = `${prefix}-${timestamp}-${random}.md`;
         return vscode.Uri.joinPath(this.getTempDirectoryUri(), filename);
     }
 
