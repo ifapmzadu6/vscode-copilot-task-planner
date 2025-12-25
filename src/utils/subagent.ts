@@ -146,12 +146,20 @@ export async function invokeSubagent(
                 const fileContent = await tempFileManager.readTempFile(outputFilePath);
                 if (fileContent) {
                     Logger.log(`Read file output: ${fileContent.length} chars`);
-                    // Clean up the temp file after reading
-                    await tempFileManager.deleteTempFile(outputFilePath);
-                    return fileContent;
-                } else {
-                    Logger.log('File output not found, using chat response as fallback');
+                    // Don't delete the file - keep it for Copilot to reference
+                    // Append file reference message to the content
+                    const fileReferenceMessage = [
+                        '',
+                        '---',
+                        '**Note:** The detailed plan has been written to the file below.',
+                        'Please read this file to continue with the implementation.',
+                        '',
+                        `\`${outputFilePath}\``
+                    ].join('\n');
+                    return fileContent + fileReferenceMessage;
                 }
+                // File output is required - throw error if file not found
+                throw new Error(`Failed to read output file: ${outputFilePath}`);
             }
 
             return responseText;
