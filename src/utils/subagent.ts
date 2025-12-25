@@ -81,15 +81,11 @@ export async function invokeSubagent(
     // Prepare file output
     const tempFileManager = getTempFileManager();
     const outputFilePath = tempFileManager.isInitialized()
-        ? tempFileManager.generateTempFilePath('output')
+        ? tempFileManager.generateTempFilePath()
         : undefined;
     const modifiedPrompt = outputFilePath
         ? prompt + buildFileOutputInstruction(outputFilePath)
         : prompt;
-
-    if (outputFilePath) {
-        Logger.log(`File output path: ${outputFilePath}`);
-    }
 
     const execute = async (): Promise<string> => {
         // Create timeout promise
@@ -118,9 +114,8 @@ export async function invokeSubagent(
             }
             Logger.log(`invokeSubagent chat response length: ${responseText.length}`);
 
-            // If file output was requested, try to read from file
+            // If file output was requested, read from file
             if (outputFilePath) {
-                const tempFileManager = getTempFileManager();
                 const fileContent = await tempFileManager.readTempFile(outputFilePath);
                 if (fileContent) {
                     Logger.log(`Read file output: ${fileContent.length} chars`);
