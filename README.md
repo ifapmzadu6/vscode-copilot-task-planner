@@ -22,11 +22,11 @@ A VS Code extension that generates high-quality, agent-executable task plans thr
 sequenceDiagram
     participant U as User
     participant C as Copilot Chat
-    participant T as #plan Tool
+    participant T as #marathonPlanner Tool
     participant W as Webview Panel
     participant S as runSubagent
 
-    U->>C: #plan add tests
+    U->>C: #marathonPlanner add tests
     C->>T: invoke(userRequest)
     T->>S: Analyze workspace
     loop Dynamic Questions (1-7)
@@ -55,9 +55,9 @@ sequenceDiagram
 
 1. Press `F5` to launch the extension
 2. Open Copilot Chat
-3. Type `#plan` followed by your request:
+3. Type `#marathonPlanner` followed by your request:
    ```
-   #plan add unit tests for the authentication module
+   #marathonPlanner add unit tests for the authentication module
    ```
 4. Answer the clarifying questions in the interactive Webview
 5. Review the generated plan:

@@ -16,7 +16,7 @@ export const RuntimeConfig = {
     /** Tool names used for invocations */
     TOOL_NAMES: {
         SUBAGENT: 'runSubagent',
-        PLAN: 'plan',
+        MARATHON_PLANNER: 'marathonPlanner',
     },
 
     /** Logging configuration */
