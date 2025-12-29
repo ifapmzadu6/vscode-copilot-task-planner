@@ -122,8 +122,8 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
      */
     private cleanUserRequest(request: string): string {
         return request
-            .replace(/^#?plan\s*/i, '')
-            .replace(/^['"]plan['"]\s*/i, '')
+            .replace(/^#?(marathonPlanner|marathon|plan)\s*/i, '')
+            .replace(/^['"](marathonPlanner|marathon|plan)['"]\s*/i, '')
             .trim();
     }
 
@@ -174,7 +174,9 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     const tool = new TaskPlannerTool();
-    context.subscriptions.push(vscode.lm.registerTool(RuntimeConfig.TOOL_NAMES.PLAN, tool));
+    context.subscriptions.push(
+        vscode.lm.registerTool(RuntimeConfig.TOOL_NAMES.MARATHON_PLANNER, tool)
+    );
 }
 
 export function deactivate() {

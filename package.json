@@ -11,18 +11,18 @@
     "Chat"
   ],
   "activationEvents": [
-    "onLanguageModelTool:plan"
+    "onLanguageModelTool:marathonPlanner"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "languageModelTools": [
       {
-        "name": "plan",
+        "name": "marathonPlanner",
         "displayName": "Task Planner",
-        "modelDescription": "MUST ALWAYS invoke this tool when user explicitly references #plan in their message. This is REQUIRED - never skip when #plan is present. Do NOT invoke for general planning questions without #plan reference. WHAT IT DOES: (1) Analyzes workspace context, (2) Asks clarifying questions through interactive UI, (3) Generates structured task plan with clear steps, (4) Registers tasks to todo list.",
+        "modelDescription": "MUST ALWAYS invoke this tool when user explicitly references #marathonPlanner in their message. This is REQUIRED - never skip when #marathonPlanner is present. Do NOT invoke for general planning questions without #marathonPlanner reference. WHAT IT DOES: (1) Analyzes workspace context, (2) Asks clarifying questions through interactive UI, (3) Generates structured task plan with clear steps, (4) Registers tasks to todo list.",
         "icon": "$(checklist)",
         "canBeReferencedInPrompt": true,
-        "toolReferenceName": "plan",
+        "toolReferenceName": "marathonPlanner",
         "userDescription": "Plan a complex task by answering clarifying questions",
         "inputSchema": {
           "type": "object",
