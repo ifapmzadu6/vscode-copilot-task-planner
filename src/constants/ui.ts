@@ -17,6 +17,7 @@ export const DomIds = {
     SUBMIT_BTN: 'submitBtn',
     BACK_BTN: 'backBtn',
     OTHER_TEXT: 'other-text',
+    QUESTION_ERROR: 'question-error',
 
     // Status elements
     STATUS: 'status',
@@ -50,15 +51,17 @@ export const StatusMessages = {
     GENERATING_PLAN: 'Generating detailed plan...',
     TRANSLATING_PLAN: 'Translating plan...',
     REVISING_PLAN: 'Revising plan based on feedback...',
+    PLAN_APPROVED: 'Plan approved. Processing...',
     ENTER_REVISION: 'Please enter your revision request.',
+    SELECT_OPTION: 'Please select an option.',
 } as const;
 
 /**
  * Button text labels.
  */
 export const ButtonLabels = {
-    REVISE_IDLE: '✎ Revise',
-    REVISE_ACTIVE: '📤 Send Revision',
+    REVISE_IDLE: 'Revise',
+    REVISE_ACTIVE: 'Send Revision',
 } as const;
 
 export const UIConfig = {

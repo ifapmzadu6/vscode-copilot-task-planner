@@ -54,14 +54,21 @@ export function generateHelperFunctions(): string {
 
         // Helper function to get answer from input
         function getAnswer() {
-            const radio = inputArea.querySelector('input[type="radio"]:checked');
-            if (radio) {
+            // Check if this is a radio button question
+            const radios = inputArea.querySelectorAll('input[type="radio"]');
+            if (radios.length > 0) {
+                // This is a select question - require a checked radio
+                const radio = inputArea.querySelector('input[type="radio"]:checked');
+                if (!radio) {
+                    return ''; // No selection made
+                }
                 if (radio.value === '__OTHER__') {
                     const otherText = document.getElementById('${DomIds.OTHER_TEXT}');
                     return otherText ? otherText.value : '';
                 }
                 return radio.value;
             }
+            // For text/multiline questions
             const input = inputArea.querySelector('input, textarea');
             return input ? input.value : '';
         }

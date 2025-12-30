@@ -1,5 +1,5 @@
 import { CollectedAnswer } from '../../types/messages';
-import { formatAnswersText } from './shared';
+import { formatAnswersText, READONLY_CONSTRAINT } from './shared';
 
 /**
  * Prompt template for question generation
@@ -15,7 +15,9 @@ export function buildNextQuestionPrompt(
 ): string {
     const answersText = formatAnswersText(answers);
 
-    return `You are a task planning assistant specialized in understanding user intent. Generate the NEXT clarifying question to deeply understand what the user truly wants.
+    return `${READONLY_CONSTRAINT}
+
+You are a task planning assistant specialized in understanding user intent. Generate the NEXT clarifying question to deeply understand what the user truly wants.
 
 ## User Request
 ${userRequest}

@@ -1,3 +1,5 @@
+import { READONLY_CONSTRAINT } from './shared';
+
 /**
  * Prompt template for workspace analysis
  */
@@ -6,7 +8,9 @@
  * Builds prompt for analyzing workspace context
  */
 export function buildAnalyzeWorkspacePrompt(userRequest: string): string {
-    return `Analyze the current workspace to provide context for understanding user intent: "${userRequest}"
+    return `${READONLY_CONSTRAINT}
+
+Analyze the current workspace to provide context for understanding user intent: "${userRequest}"
 
 ## Analysis Focus
 

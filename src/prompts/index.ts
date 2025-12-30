@@ -10,5 +10,5 @@ export {
     buildTranslatePlanPrompt,
     buildRevisePlanPrompt,
     buildRefinedPromptPrompt,
-    buildRegisterTasksPrompt
+    buildExtractTasksPrompt
 } from './templates/index';

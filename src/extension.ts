@@ -35,27 +35,37 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
         token: vscode.CancellationToken
     ): Promise<vscode.LanguageModelToolResult> {
         const { userRequest, todoToolName } = options.input;
-        Logger.log(`invoke called with userRequest: ${userRequest}`);
+        Logger.log('========================================');
+        Logger.log('=== Marathon Planner: Tool Invoked ===');
+        Logger.log('========================================');
+        Logger.log(`Input userRequest: "${userRequest}"`);
+        Logger.log(`Input todoToolName: "${todoToolName ?? 'not specified'}"`);
+        Logger.log(`toolInvocationToken: ${options.toolInvocationToken ? 'present' : 'undefined'}`);
 
         const cleanRequest = this.cleanUserRequest(userRequest);
-        Logger.log(`cleanRequest: ${cleanRequest}`);
+        Logger.log(`Cleaned request: "${cleanRequest}"`);
 
         const webviewManager = new WebviewPanelManager();
 
         try {
             // Step 1: Create persistent Webview panel (show immediately)
+            Logger.log('----------------------------------------');
             Logger.log('Step 1: Creating Webview panel...');
             const panel = webviewManager.createPanel(cleanRequest);
+            Logger.log('Step 1: Complete - Webview panel created');
 
             // Step 2: Analyze workspace context
+            Logger.log('----------------------------------------');
             Logger.log('Step 2: Analyzing workspace context...');
             const fullContext = await this.workspaceAnalyzer.analyze(
                 cleanRequest,
                 options.toolInvocationToken,
                 token
             );
+            Logger.log(`Step 2: Complete - Context length: ${fullContext.length} chars`);
 
             // Step 3: Run question flow
+            Logger.log('----------------------------------------');
             Logger.log('Step 3: Running question flow...');
             const questionResult = await this.questionFlow.run({
                 panel,
@@ -64,13 +74,16 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
                 toolInvocationToken: options.toolInvocationToken,
                 token
             });
+            Logger.log(`Step 3: Complete - Cancelled: ${questionResult.cancelled}, Answers count: ${questionResult.answers.length}`);
 
             if (questionResult.cancelled) {
+                Logger.log('Step 3: User cancelled during question flow');
                 webviewManager.dispose();
                 return this.createCancelledResult();
             }
 
             // Step 4: Run plan confirmation flow
+            Logger.log('----------------------------------------');
             Logger.log('Step 4: Running plan confirmation...');
             const planResult = await this.planConfirmation.run({
                 panel,
@@ -80,29 +93,61 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
                 toolInvocationToken: options.toolInvocationToken,
                 token
             });
+            Logger.log(`Step 4: Complete - Cancelled: ${planResult.cancelled}, Plan length: ${planResult.plan.length} chars`);
 
             if (planResult.cancelled) {
+                Logger.log('Step 4: User cancelled during plan confirmation');
                 webviewManager.dispose();
                 return this.createCancelledResult();
             }
 
             // Step 5: Register tasks to todo list
-            Logger.log('Step 5: Registering tasks...');
+            Logger.log('----------------------------------------');
+            Logger.log('Step 5: Registering tasks to todo list...');
+            Logger.log(`Step 5: Using todoToolName: "${todoToolName ?? 'default'}"`);
             await this.planConfirmation.registerTasks(
                 planResult.plan,
                 options.toolInvocationToken,
                 token,
                 todoToolName
             );
+            Logger.log('Step 5: Complete - Task registration finished');
 
             // Cleanup and return
+            Logger.log('----------------------------------------');
             webviewManager.dispose();
-            Logger.log('Returning refined prompt');
+            Logger.log('Webview disposed, preparing final result...');
+            Logger.log(`Plan file path: ${planResult.planFilePath}`);
+            Logger.log(`Plan content length: ${planResult.plan.length} chars`);
+
+            // Build result with clear instruction to proceed without asking
+            // Include the FULL plan content directly (not file path) so Copilot can execute
+            const resultMessage = [
+                '## Plan Approved by User',
+                '',
+                'The user has already reviewed and approved this plan through the interactive planning interface.',
+                '**Do NOT ask for confirmation again.** Proceed directly with executing the plan.',
+                '',
+                '---',
+                '',
+                '## Execution Plan',
+                '',
+                planResult.plan
+            ].join('\n');
+
+            Logger.log(`Final result message length: ${resultMessage.length} chars`);
+            Logger.log('========================================');
+            Logger.log('=== Marathon Planner: Complete ===');
+            Logger.log('========================================');
+
             return new vscode.LanguageModelToolResult([
-                new vscode.LanguageModelTextPart(planResult.plan)
+                new vscode.LanguageModelTextPart(resultMessage)
             ]);
 
         } catch (error) {
+            Logger.error('========================================');
+            Logger.error('=== Marathon Planner: ERROR ===');
+            Logger.error('========================================');
             Logger.error('Error:', error);
             webviewManager.dispose();
 

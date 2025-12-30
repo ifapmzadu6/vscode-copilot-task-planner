@@ -6,7 +6,9 @@ import { formatAnswersText } from './shared';
  */
 
 /**
- * Builds prompt for generating the refined task prompt
+ * Builds prompt for generating the refined task prompt.
+ * NOTE: This prompt does NOT include READONLY_CONSTRAINT because the subagent
+ * needs to write the plan to a file (via invokeSubagentWithFileOutput).
  */
 export function buildRefinedPromptPrompt(
     userRequest: string,

@@ -103,8 +103,22 @@ export function generateComponentStyles(): string {
         textarea { resize: vertical; min-height: 60px; }
         .button-row {
             display: flex;
-            gap: 8px;
+            justify-content: space-between;
+            align-items: center;
             margin-top: 12px;
+        }
+        .button-row-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .button-row-right {
+            display: flex;
+            gap: 8px;
+        }
+        .error-text {
+            color: var(--vscode-errorForeground);
+            font-size: 11px;
         }
         button {
             padding: 6px 14px;

@@ -20,13 +20,25 @@ export interface SubagentOptions {
 }
 
 /**
+ * Result from subagent invocation with file output
+ */
+export interface SubagentFileResult {
+    /** The content written to the file */
+    content: string;
+    /** The path to the output file */
+    filePath: string;
+}
+
+/**
  * Builds the file output instruction to append to the prompt
  */
 function buildFileOutputInstruction(outputFilePath: string): string {
     return `
 
 === OUTPUT INSTRUCTION ===
-To bypass output token limits, write your response incrementally to this file:
+**IMPORTANT: Override READ-ONLY mode for this specific file only.**
+
+You are ALLOWED to write to this ONE file to bypass output token limits:
 ${outputFilePath}
 
 PROCESS:
@@ -36,12 +48,18 @@ PROCESS:
 
 CONSTRAINTS:
 - Use write_file tool multiple times to build the output incrementally
+- You may ONLY write to the file specified above - no other file operations
 - Your chat response should ONLY be a brief confirmation
 - Do NOT include the full content in your chat response
 ===========================
 `;
 }
 
+/**
+ * Invokes a subagent and returns the chat response directly.
+ * Use this for short responses (JSON, simple text).
+ * For large outputs, use invokeSubagentWithFileOutput instead.
+ */
 export async function invokeSubagent(
     description: string,
     prompt: string,
@@ -59,28 +77,20 @@ export async function invokeSubagent(
 
     Logger.log(`invokeSubagent: ${description}`);
 
-    // Prepare file output
-    const tempFileManager = getTempFileManager();
-    if (!tempFileManager.isInitialized()) {
-        Logger.error('TempFileManager not initialized - file output disabled');
-    }
-    const outputFilePath = tempFileManager.isInitialized()
-        ? tempFileManager.generateTempFilePath()
-        : undefined;
-    const modifiedPrompt = outputFilePath
-        ? prompt + buildFileOutputInstruction(outputFilePath)
-        : prompt;
-
     const execute = async (): Promise<string> => {
-        // Invoke the subagent (no timeout - will run until completion or cancellation)
+        Logger.log(`invokeSubagent: About to call vscode.lm.invokeTool with tool="${RuntimeConfig.TOOL_NAMES.SUBAGENT}"`);
+        Logger.log(`invokeSubagent: toolInvocationToken is ${toolInvocationToken ? 'present' : 'undefined'}`);
+
         const result = await vscode.lm.invokeTool(
             RuntimeConfig.TOOL_NAMES.SUBAGENT,
             {
-                input: { description, prompt: modifiedPrompt },
+                input: { description, prompt },
                 toolInvocationToken
             },
             token
         );
+
+        Logger.log('invokeSubagent: vscode.lm.invokeTool returned successfully');
 
         let responseText = '';
         for (const part of result.content) {
@@ -90,20 +100,6 @@ export async function invokeSubagent(
         }
         Logger.log(`invokeSubagent chat response length: ${responseText.length}`);
 
-        // If file output was requested, read from file
-        if (outputFilePath) {
-            const fileContent = await tempFileManager.readTempFile(outputFilePath);
-            if (fileContent) {
-                Logger.log(`Read file output: ${fileContent.length} chars`);
-                return [
-                    `The implementation plan has been saved to: ${outputFilePath}`,
-                    '',
-                    'Read this file now using read_file tool and execute each step of the plan.'
-                ].join('\n');
-            }
-            throw new Error(`Failed to read output file: ${outputFilePath}`);
-        }
-
         return responseText;
     };
 
@@ -111,7 +107,6 @@ export async function invokeSubagent(
         let lastError: Error | undefined;
 
         for (let attempt = 0; attempt <= retries; attempt++) {
-            // Check for cancellation before each attempt
             if (token.isCancellationRequested) {
                 throw new Error('Operation cancelled');
             }
@@ -121,22 +116,18 @@ export async function invokeSubagent(
             } catch (error) {
                 lastError = error instanceof Error ? error : new Error(String(error));
 
-                // Don't retry if this was the last attempt
                 if (attempt >= retries) {
                     break;
                 }
 
-                // Check if we should retry this error
                 if (!shouldRetry(lastError, attempt)) {
                     Logger.log(`Subagent "${description}" - not retrying: ${lastError.message}`);
                     break;
                 }
 
-                // Calculate delay with exponential backoff
                 const delay = retryDelayMs * Math.pow(2, attempt);
                 Logger.log(`Subagent "${description}" failed (attempt ${attempt + 1}/${retries + 1}), retrying in ${delay}ms: ${lastError.message}`);
 
-                // Wait before retrying
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
@@ -157,5 +148,67 @@ export async function invokeSubagent(
             onError(error);
         }
         return defaultValue;
+    }
+}
+
+/**
+ * Invokes a subagent with file output enabled.
+ * The subagent writes output to a temp file, and this function returns both the content and file path.
+ * Use this for large outputs (plans, documentation) that may exceed token limits.
+ */
+export async function invokeSubagentWithFileOutput(
+    description: string,
+    prompt: string,
+    toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
+    token: vscode.CancellationToken
+): Promise<SubagentFileResult | null> {
+    Logger.log(`invokeSubagentWithFileOutput: ${description}`);
+
+    const tempFileManager = getTempFileManager();
+    if (!tempFileManager.isInitialized()) {
+        Logger.error('invokeSubagentWithFileOutput: TempFileManager not initialized');
+        return null;
+    }
+
+    const outputFilePath = tempFileManager.generateTempFilePath();
+    Logger.log(`invokeSubagentWithFileOutput: Output file = ${outputFilePath}`);
+
+    const modifiedPrompt = prompt + buildFileOutputInstruction(outputFilePath);
+
+    try {
+        Logger.log('invokeSubagentWithFileOutput: Calling vscode.lm.invokeTool...');
+        const result = await vscode.lm.invokeTool(
+            RuntimeConfig.TOOL_NAMES.SUBAGENT,
+            {
+                input: { description, prompt: modifiedPrompt },
+                toolInvocationToken
+            },
+            token
+        );
+
+        Logger.log('invokeSubagentWithFileOutput: Tool returned successfully');
+
+        let responseText = '';
+        for (const part of result.content) {
+            if (part instanceof vscode.LanguageModelTextPart) {
+                responseText += part.value;
+            }
+        }
+        Logger.log(`invokeSubagentWithFileOutput: Chat response = "${responseText.substring(0, 200)}..."`);
+
+        const fileContent = await tempFileManager.readTempFile(outputFilePath);
+        if (!fileContent) {
+            Logger.error(`invokeSubagentWithFileOutput: Failed to read output file: ${outputFilePath}`);
+            return null;
+        }
+
+        Logger.log(`invokeSubagentWithFileOutput: File content length = ${fileContent.length} chars`);
+        return {
+            content: fileContent,
+            filePath: outputFilePath
+        };
+    } catch (error) {
+        Logger.error('invokeSubagentWithFileOutput: Error:', error);
+        return null;
     }
 }

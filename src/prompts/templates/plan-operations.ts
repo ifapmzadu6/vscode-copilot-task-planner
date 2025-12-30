@@ -1,3 +1,5 @@
+import { READONLY_CONSTRAINT } from './shared';
+
 /**
  * Prompt templates for plan operations (translate, revise)
  */
@@ -6,7 +8,9 @@
  * Builds prompt for translating the plan
  */
 export function buildTranslatePlanPrompt(plan: string, targetLang: string): string {
-    return `Translate the following task plan to ${targetLang}.
+    return `${READONLY_CONSTRAINT}
+
+Translate the following task plan to ${targetLang}.
 
 ## Translation Rules
 1. **Preserve Structure**: Keep all Markdown formatting (headers, lists, code blocks) intact
@@ -24,7 +28,9 @@ Return ONLY the translated plan with no additional explanations.`;
  * Builds prompt for revising the plan based on feedback
  */
 export function buildRevisePlanPrompt(currentPlan: string, feedback: string): string {
-    return `Revise the following task plan based on user feedback.
+    return `${READONLY_CONSTRAINT}
+
+Revise the following task plan based on user feedback.
 
 ## Current Plan
 ${currentPlan}
