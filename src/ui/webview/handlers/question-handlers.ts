@@ -15,12 +15,18 @@ export function generateQuestionHandlers(): string {
             currentQuestion.style.display = 'block';
             status.style.display = 'none';
 
+            // Hide any previous error
+            hideQuestionError();
+
             // Show/hide back button
             backBtn.style.display = message.canGoBack ? 'inline-block' : 'none';
 
             // Focus on the input
             const input = inputArea.querySelector('input, textarea');
             if (input) input.focus();
+
+            // Auto-scroll to bottom
+            setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 50);
         }
         // Handle question answered confirmation
         else if (message.type === '${ExtensionMessage.QUESTION_ANSWERED}') {
@@ -42,6 +48,9 @@ export function generateQuestionHandlers(): string {
             currentQuestion.style.display = 'none';
             status.style.display = 'block';
             statusText.textContent = '${StatusMessages.THINKING_NEXT_QUESTION}';
+
+            // Auto-scroll to bottom
+            setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 50);
         }
         // Handle back navigation (remove last Q&A)
         else if (message.type === '${ExtensionMessage.REMOVE_LAST_QA}') {

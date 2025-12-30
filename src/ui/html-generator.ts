@@ -24,8 +24,13 @@ function generateHtmlStructure(userRequest: string): string {
         <div class="question-text" id="${DomIds.Q_TEXT}"></div>
         <div class="options-list" id="${DomIds.INPUT_AREA}"></div>
         <div class="button-row">
-            <button type="button" class="btn-primary" id="${DomIds.SUBMIT_BTN}">Continue</button>
-            <button type="button" class="btn-secondary" id="${DomIds.BACK_BTN}" style="display: none;">← Back</button>
+            <div class="button-row-left">
+                <button type="button" class="btn-primary" id="${DomIds.SUBMIT_BTN}">Continue</button>
+                <span id="${DomIds.QUESTION_ERROR}" class="error-text" style="display: none;"></span>
+            </div>
+            <div class="button-row-right">
+                <button type="button" class="btn-secondary" id="${DomIds.BACK_BTN}" style="display: none;">Back</button>
+            </div>
         </div>
     </div>
 
@@ -50,14 +55,18 @@ function generateHtmlStructure(userRequest: string): string {
         <div id="${DomIds.FEEDBACK_SECTION}" style="display: none; margin-bottom: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                 <div class="question-label" style="margin-bottom: 0;">Revision Request</div>
-                <button type="button" id="${DomIds.FEEDBACK_CANCEL_BTN}" style="background: none; border: none; color: var(--vscode-descriptionForeground); cursor: pointer; font-size: 12px; padding: 2px 6px;">✕ Cancel</button>
+                <button type="button" id="${DomIds.FEEDBACK_CANCEL_BTN}" style="background: none; border: none; color: var(--vscode-descriptionForeground); cursor: pointer; font-size: 12px; padding: 2px 6px;">Cancel</button>
             </div>
             <textarea id="${DomIds.FEEDBACK_TEXT}" rows="3" placeholder="Describe how you want to change the plan..."></textarea>
             <div id="${DomIds.FEEDBACK_ERROR}" style="display: none; color: var(--vscode-errorForeground); font-size: 11px; margin-top: 4px;"></div>
         </div>
         <div class="button-row">
-            <button type="button" class="btn-primary" id="${DomIds.APPROVE_BTN}">✓ Approve</button>
-            <button type="button" class="btn-secondary" id="${DomIds.REVISE_BTN}">${ButtonLabels.REVISE_IDLE}</button>
+            <div class="button-row-left">
+                <button type="button" class="btn-primary" id="${DomIds.APPROVE_BTN}">Approve</button>
+            </div>
+            <div class="button-row-right">
+                <button type="button" class="btn-secondary" id="${DomIds.REVISE_BTN}">${ButtonLabels.REVISE_IDLE}</button>
+            </div>
         </div>
     </div>
     `;

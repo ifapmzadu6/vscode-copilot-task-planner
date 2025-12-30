@@ -4,6 +4,7 @@ import { safePostMessage, createPanelPromise } from '../utils/webview';
 import { MessageHandlerBuilder } from '../utils/message-handler-builder';
 import {
     PlanGeneratorService,
+    PlanGenerationResult,
     PlanTranslatorService,
     PlanReviserService,
     TaskRegistrationService,
@@ -23,8 +24,10 @@ import {
 export interface PlanConfirmationResult {
     /** Whether the flow was cancelled */
     cancelled: boolean;
-    /** The final approved plan (empty if cancelled) */
+    /** The final approved plan content (empty if cancelled) */
     plan: string;
+    /** The file path where the plan is saved (empty if cancelled) */
+    planFilePath: string;
 }
 
 /**
@@ -76,7 +79,7 @@ export class PlanConfirmationOrchestrator {
         const { panel, userRequest, context, answers, toolInvocationToken, token } = options;
 
         Logger.log('Generating initial plan...');
-        let refinedPrompt = await this.generator.generate(
+        const planResult = await this.generator.generate(
             userRequest,
             context,
             answers,
@@ -84,7 +87,11 @@ export class PlanConfirmationOrchestrator {
             token
         );
 
+        let refinedPrompt = planResult.content;
+        const planFilePath = planResult.filePath;
+
         Logger.log(`Generated plan length: ${refinedPrompt.length}`);
+        Logger.log(`Plan saved to: ${planFilePath}`);
         Logger.log('Starting plan confirmation loop...');
 
         let panelClosed = false;
@@ -102,11 +109,11 @@ export class PlanConfirmationOrchestrator {
             Logger.log(`Confirmation result: ${confirmResult?.type}`);
 
             if (confirmResult === null) {
-                return { cancelled: true, plan: '' };
+                return { cancelled: true, plan: '', planFilePath: '' };
             }
 
             if (confirmResult.type === 'approve') {
-                return { cancelled: false, plan: refinedPrompt };
+                return { cancelled: false, plan: refinedPrompt, planFilePath };
             }
 
             if (confirmResult.feedback) {
@@ -121,7 +128,7 @@ export class PlanConfirmationOrchestrator {
             }
         }
 
-        return { cancelled: true, plan: '' };
+        return { cancelled: true, plan: '', planFilePath: '' };
     }
 
     /**

@@ -24,6 +24,9 @@ export function generatePlanHandlers(): string {
             if (!message.isTranslated) {
                 document.getElementById('${DomIds.LANG_SELECT}').value = 'English';
             }
+
+            // Scroll to top so user can read plan from the beginning
+            setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
         }
         // Handle translation status
         else if (message.type === '${ExtensionMessage.TRANSLATING}') {
