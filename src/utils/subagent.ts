@@ -89,6 +89,24 @@ async function executeWithRetry<T>(execute: () => Promise<T>, options: RetryExec
 }
 
 /**
+ * Closes a temp file if it was automatically opened in the editor by VS Code.
+ * This prevents confusing the user with files they didn't explicitly open.
+ */
+async function closeTempFileIfOpen(filePath: string): Promise<void> {
+    const fileUri = vscode.Uri.file(filePath);
+
+    for (const tabGroup of vscode.window.tabGroups.all) {
+        for (const tab of tabGroup.tabs) {
+            if (tab.input instanceof vscode.TabInputText && tab.input.uri.fsPath === fileUri.fsPath) {
+                Logger.log(`Closing auto-opened temp file: ${filePath}`);
+                await vscode.window.tabGroups.close(tab);
+                return;
+            }
+        }
+    }
+}
+
+/**
  * Builds the file output instruction to append to the prompt
  */
 function buildFileOutputInstruction(outputFilePath: string): string {
@@ -230,6 +248,9 @@ export async function invokeSubagentWithFileOutput(
         if (!fileContent) {
             throw new Error(`Failed to read output file: ${outputFilePath}`);
         }
+
+        // Close the temp file if it was opened in the editor (VS Code may auto-open it)
+        await closeTempFileIfOpen(outputFilePath);
 
         Logger.log(`invokeSubagentWithFileOutput: File content length = ${fileContent.length} chars`);
         return {
