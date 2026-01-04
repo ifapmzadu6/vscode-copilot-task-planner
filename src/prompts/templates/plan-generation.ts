@@ -142,38 +142,76 @@ The agent should internalize these principles before starting.]
 
 ---
 
-### Step 3: Self-Review - [Brief description of what's being reviewed]
-**Goal**: Verify implementation quality and catch issues early
+### Step 3: Self-Review Checkpoint (MANDATORY)
+⚠️ **THIS STEP IS REQUIRED** - Do not skip. Review the implementation from the previous 2-3 steps before continuing.
+
+**Goal**: Verify implementation quality and catch issues before proceeding
 
 **Thinking Guide**:
-> Before proceeding further, take time to review what you've built
+> STOP and review before continuing. This is not optional.
 > - Is the code following the patterns identified in "Codebase Patterns to Follow"?
 > - Are you avoiding the anti-patterns listed earlier?
 > - Would this code be maintainable by another developer?
+> - Have you introduced any bugs or regressions?
 
-**Review Checklist**:
+**Review Checklist** (ALL items must pass):
 - [ ] Code follows existing patterns from [reference file]
 - [ ] Error handling is comprehensive and consistent
 - [ ] No placeholder values or TODOs left unaddressed
 - [ ] TypeScript types are accurate (or equivalent for other languages)
 - [ ] Changes are minimal and focused (no scope creep)
+- [ ] No obvious bugs or logical errors
+- [ ] Code compiles/builds without errors
 
 **Actions**:
 1. Re-read the code you just wrote with fresh eyes
 2. Compare implementation against similar existing code
-3. Run verification commands: [specific commands]
+3. Run verification commands: ${bq}npm run build${bq}, ${bq}npm test${bq}
 4. Check for common mistakes specific to this task
 
 **If Issues Found**:
 - Document the issue clearly
-- Go back to the relevant step and fix
+- Go back to the relevant step and fix immediately
 - Re-run this review after fixing
+- Do NOT proceed until all checklist items pass
 
-➡️ **Next**: If all checklist items pass, proceed to Step 4.
+➡️ **Next**: Only after ALL checklist items pass, proceed to Step 4.
 
 ---
 
-[Continue with remaining implementation steps, inserting additional review steps after every 2-3 implementation steps]
+[Continue with remaining implementation steps. MANDATORY: Insert a self-review step after every 2-3 implementation steps]
+
+## Final Self-Review
+⚠️ **MANDATORY** - Complete this review before Final Verification
+
+**Goal**: Comprehensive review of ALL changes before declaring completion
+
+**Thinking Guide**:
+> Before running final verification, ensure all work meets quality standards.
+> This is your last chance to catch issues before the task is considered complete.
+
+**Comprehensive Checklist**:
+- [ ] All Success Criteria from the beginning of this plan are addressed
+- [ ] All implementation steps are complete (none skipped without documented reason)
+- [ ] Code follows ALL patterns identified in "Codebase Patterns to Follow"
+- [ ] None of the "Anti-patterns to Avoid" are present in the code
+- [ ] All previous self-review issues have been resolved
+- [ ] No debugging code, console.logs, or temporary code remains
+- [ ] Code is properly formatted and follows project conventions
+- [ ] All new code has appropriate error handling
+
+**Actions**:
+1. Review the diff of all changes made during this task
+2. Verify each Success Criterion is met
+3. Run full build and test suite
+4. Check for any regressions in existing functionality
+
+**If Issues Found**:
+- Fix immediately before proceeding
+- Document what was fixed and why
+- Re-run this checklist after fixes
+
+➡️ **Next**: Only after ALL items pass, proceed to Final Verification.
 
 ## Final Verification
 
@@ -309,15 +347,24 @@ ${mdBlock}
 - "Codebase Patterns" should cite specific files as examples
 - "Anti-patterns" should be specific to this task and codebase
 
-### Self-Review Steps Integration
-CRITICAL: Insert self-review steps strategically throughout the plan:
-- After implementing 2-3 related features, insert a review step
-- After completing a major architectural change, insert a review step
-- Before moving to a new subsystem or module, insert a review step
-- Review steps should:
-  - Reference the "Codebase Patterns to Follow" and "Anti-patterns to Avoid"
-  - Include 4-7 specific checklist items relevant to what was just implemented
-  - Provide concrete verification commands (build, test, lint)
-  - Allow the agent to self-correct before proceeding
-- Benefits: Catches errors early, ensures quality, maintains forward momentum by preventing major rework later`;
+### Self-Review Steps Integration (MANDATORY)
+**REQUIRED**: You MUST insert self-review steps throughout the plan. Plans without self-review steps are INVALID.
+
+**When to Insert Self-Review Steps**:
+- After implementing 2-3 related features → MUST insert review step
+- After completing a major architectural change → MUST insert review step  
+- Before moving to a new subsystem or module → MUST insert review step
+
+**Self-Review Step Requirements**:
+- Use the format: ${bq}### Step N: Self-Review Checkpoint (MANDATORY)${bq} (where N is the next step number)
+- Reference the "Codebase Patterns to Follow" and "Anti-patterns to Avoid"
+- Include 5-8 specific checklist items relevant to what was just implemented
+- Provide concrete verification commands (build, test, lint)
+- Include "Do NOT proceed until all checklist items pass"
+
+**Why This is Mandatory**:
+- Catches errors early before they compound
+- Ensures consistent quality throughout implementation
+- Maintains forward momentum by preventing major rework later
+- Gives the agent explicit permission to pause and verify work`;
 }
