@@ -9,6 +9,6 @@ export {
     buildNextQuestionPrompt,
     buildTranslatePlanPrompt,
     buildRevisePlanPrompt,
-    buildRefinedPromptPrompt,
+    buildPlanGenerationPrompt,
     buildExtractTasksPrompt
 } from './templates/index';

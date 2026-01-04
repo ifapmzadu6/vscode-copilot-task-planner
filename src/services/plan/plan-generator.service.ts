@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Logger } from '../../utils/logger';
 import { invokeSubagentWithFileOutput } from '../../utils/subagent';
-import { buildRefinedPromptPrompt } from '../../prompts/templates';
+import { buildPlanGenerationPrompt } from '../../prompts/templates';
 import { CollectedAnswer } from '../../types/messages';
 
 /**
@@ -43,7 +43,7 @@ export class PlanGeneratorService {
         Logger.log(`Plan Generator: context length = ${context.length}`);
         Logger.log(`Plan Generator: answers count = ${answers.length}`);
 
-        const prompt = buildRefinedPromptPrompt(userRequest, context, answers);
+        const prompt = buildPlanGenerationPrompt(userRequest, context, answers);
         Logger.log(`Plan Generator: Prompt length = ${prompt.length}`);
 
         Logger.log('Plan Generator: Invoking subagent with file output...');
