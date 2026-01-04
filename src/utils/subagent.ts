@@ -30,6 +30,66 @@ export interface SubagentFileResult {
 }
 
 /**
+ * Options for the retry executor
+ */
+interface RetryExecutorOptions {
+    /** Number of retry attempts */
+    retries: number;
+    /** Initial delay between retries in milliseconds */
+    retryDelayMs: number;
+    /** Function to determine if an error should trigger a retry */
+    shouldRetry: (error: Error, attempt: number) => boolean;
+    /** Description for logging purposes */
+    description: string;
+    /** Cancellation token */
+    token: vscode.CancellationToken;
+}
+
+/**
+ * Executes a function with retry logic and exponential backoff.
+ * This is a shared utility to avoid code duplication.
+ */
+async function executeWithRetry<T>(
+    execute: () => Promise<T>,
+    options: RetryExecutorOptions
+): Promise<T> {
+    const { retries, retryDelayMs, shouldRetry, description, token } = options;
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        if (token.isCancellationRequested) {
+            throw new Error('Operation cancelled');
+        }
+
+        try {
+            return await execute();
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+
+            if (attempt >= retries) {
+                break;
+            }
+
+            if (!shouldRetry(lastError, attempt)) {
+                Logger.log(`Subagent "${description}" - not retrying: ${lastError.message}`);
+                break;
+            }
+
+            const delay = retryDelayMs * Math.pow(2, attempt);
+            Logger.log(`Subagent "${description}" failed (attempt ${attempt + 1}/${retries + 1}), retrying in ${delay}ms: ${lastError.message}`);
+
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+
+    if (lastError) {
+        throw lastError;
+    }
+
+    throw new Error(`Subagent "${description}" failed without providing an error`);
+}
+
+/**
  * Builds the file output instruction to append to the prompt
  */
 function buildFileOutputInstruction(outputFilePath: string): string {
@@ -53,6 +113,19 @@ CONSTRAINTS:
 - Do NOT include the full content in your chat response
 ===========================
 `;
+}
+
+/**
+ * Extracts text from a LanguageModelToolResult
+ */
+function extractResponseText(result: vscode.LanguageModelToolResult): string {
+    let responseText = '';
+    for (const part of result.content) {
+        if (part instanceof vscode.LanguageModelTextPart) {
+            responseText += part.value;
+        }
+    }
+    return responseText;
 }
 
 /**
@@ -91,56 +164,20 @@ export async function invokeSubagent(
         );
 
         Logger.log('invokeSubagent: vscode.lm.invokeTool returned successfully');
-
-        let responseText = '';
-        for (const part of result.content) {
-            if (part instanceof vscode.LanguageModelTextPart) {
-                responseText += part.value;
-            }
-        }
+        const responseText = extractResponseText(result);
         Logger.log(`invokeSubagent chat response length: ${responseText.length}`);
 
         return responseText;
     };
 
-    const executeWithRetry = async (): Promise<string> => {
-        let lastError: Error | undefined;
-
-        for (let attempt = 0; attempt <= retries; attempt++) {
-            if (token.isCancellationRequested) {
-                throw new Error('Operation cancelled');
-            }
-
-            try {
-                return await execute();
-            } catch (error) {
-                lastError = error instanceof Error ? error : new Error(String(error));
-
-                if (attempt >= retries) {
-                    break;
-                }
-
-                if (!shouldRetry(lastError, attempt)) {
-                    Logger.log(`Subagent "${description}" - not retrying: ${lastError.message}`);
-                    break;
-                }
-
-                const delay = retryDelayMs * Math.pow(2, attempt);
-                Logger.log(`Subagent "${description}" failed (attempt ${attempt + 1}/${retries + 1}), retrying in ${delay}ms: ${lastError.message}`);
-
-                await new Promise(resolve => setTimeout(resolve, delay));
-            }
-        }
-
-        if (lastError) {
-            throw lastError;
-        }
-
-        throw new Error(`Subagent "${description}" failed without providing an error`);
-    };
-
     try {
-        const result = await executeWithRetry();
+        const result = await executeWithRetry(execute, {
+            retries,
+            retryDelayMs,
+            shouldRetry,
+            description,
+            token
+        });
         return result || defaultValue;
     } catch (error) {
         Logger.error(`${description} error:`, error);
@@ -183,7 +220,7 @@ export async function invokeSubagentWithFileOutput(
 
     const modifiedPrompt = prompt + buildFileOutputInstruction(outputFilePath);
 
-    const execute = async (): Promise<SubagentFileResult | null> => {
+    const execute = async (): Promise<SubagentFileResult> => {
         Logger.log('invokeSubagentWithFileOutput: Calling vscode.lm.invokeTool...');
         const result = await vscode.lm.invokeTool(
             RuntimeConfig.TOOL_NAMES.SUBAGENT,
@@ -195,13 +232,7 @@ export async function invokeSubagentWithFileOutput(
         );
 
         Logger.log('invokeSubagentWithFileOutput: Tool returned successfully');
-
-        let responseText = '';
-        for (const part of result.content) {
-            if (part instanceof vscode.LanguageModelTextPart) {
-                responseText += part.value;
-            }
-        }
+        const responseText = extractResponseText(result);
         Logger.log(`invokeSubagentWithFileOutput: Chat response = "${responseText.substring(0, 200)}..."`);
 
         const fileContent = await tempFileManager.readTempFile(outputFilePath);
@@ -216,44 +247,14 @@ export async function invokeSubagentWithFileOutput(
         };
     };
 
-    const executeWithRetry = async (): Promise<SubagentFileResult | null> => {
-        let lastError: Error | undefined;
-
-        for (let attempt = 0; attempt <= retries; attempt++) {
-            if (token.isCancellationRequested) {
-                throw new Error('Operation cancelled');
-            }
-
-            try {
-                return await execute();
-            } catch (error) {
-                lastError = error instanceof Error ? error : new Error(String(error));
-
-                if (attempt >= retries) {
-                    break;
-                }
-
-                if (!shouldRetry(lastError, attempt)) {
-                    Logger.log(`Subagent "${description}" - not retrying: ${lastError.message}`);
-                    break;
-                }
-
-                const delay = retryDelayMs * Math.pow(2, attempt);
-                Logger.log(`Subagent "${description}" failed (attempt ${attempt + 1}/${retries + 1}), retrying in ${delay}ms: ${lastError.message}`);
-
-                await new Promise(resolve => setTimeout(resolve, delay));
-            }
-        }
-
-        if (lastError) {
-            throw lastError;
-        }
-
-        throw new Error(`Subagent "${description}" failed without providing an error`);
-    };
-
     try {
-        return await executeWithRetry();
+        return await executeWithRetry(execute, {
+            retries,
+            retryDelayMs,
+            shouldRetry,
+            description,
+            token
+        });
     } catch (error) {
         Logger.error(`invokeSubagentWithFileOutput error: ${description}`, error);
         if (onError && error instanceof Error) {
