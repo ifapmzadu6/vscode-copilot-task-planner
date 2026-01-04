@@ -29,4 +29,3 @@ export const SUPPORTED_LANGUAGES: readonly LanguageOption[] = [
     { value: 'Turkish', label: 'Türkçe' },
     { value: 'Czech', label: 'Čeština' },
 ] as const;
-

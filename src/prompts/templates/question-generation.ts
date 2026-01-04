@@ -8,11 +8,7 @@ import { formatAnswersText, READONLY_CONSTRAINT } from './shared';
 /**
  * Builds prompt for generating the next question
  */
-export function buildNextQuestionPrompt(
-    userRequest: string,
-    context: string,
-    answers: CollectedAnswer[]
-): string {
+export function buildNextQuestionPrompt(userRequest: string, context: string, answers: CollectedAnswer[]): string {
     const answersText = formatAnswersText(answers);
 
     return `${READONLY_CONSTRAINT}

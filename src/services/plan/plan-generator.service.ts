@@ -47,12 +47,7 @@ export class PlanGeneratorService {
         Logger.log(`Plan Generator: Prompt length = ${prompt.length}`);
 
         Logger.log('Plan Generator: Invoking subagent with file output...');
-        const result = await invokeSubagentWithFileOutput(
-            'Generate task prompt',
-            prompt,
-            toolInvocationToken,
-            token
-        );
+        const result = await invokeSubagentWithFileOutput('Generate task prompt', prompt, toolInvocationToken, token);
 
         if (!result) {
             Logger.error('Plan Generator: Failed to generate plan');
@@ -66,7 +61,7 @@ export class PlanGeneratorService {
 
         return {
             content: result.content,
-            filePath: result.filePath
+            filePath: result.filePath,
         };
     }
 }

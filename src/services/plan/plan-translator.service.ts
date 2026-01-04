@@ -26,12 +26,7 @@ export class PlanTranslatorService {
         Logger.log(`Translating plan to ${targetLang}`);
         const prompt = buildTranslatePlanPrompt(plan, targetLang);
 
-        const result = await invokeSubagent(
-            `Translate plan to ${targetLang}`,
-            prompt,
-            toolInvocationToken,
-            token
-        );
+        const result = await invokeSubagent(`Translate plan to ${targetLang}`, prompt, toolInvocationToken, token);
 
         return result || plan;
     }

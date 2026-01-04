@@ -10,11 +10,7 @@ import { formatAnswersText } from './shared';
  * NOTE: This prompt does NOT include READONLY_CONSTRAINT because the subagent
  * needs to write the plan to a file (via invokeSubagentWithFileOutput).
  */
-export function buildPlanGenerationPrompt(
-    userRequest: string,
-    context: string,
-    answers: CollectedAnswer[]
-): string {
+export function buildPlanGenerationPrompt(userRequest: string, context: string, answers: CollectedAnswer[]): string {
     const answersText = formatAnswersText(answers);
     const bq = '`';
     const mdBlock = bq + bq + bq;

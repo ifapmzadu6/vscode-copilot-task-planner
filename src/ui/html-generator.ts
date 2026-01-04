@@ -45,8 +45,8 @@ function generateHtmlStructure(userRequest: string): string {
             <div id="${DomIds.LANG_TOGGLE}" style="display: flex; gap: 4px; align-items: center;">
                 <span style="font-size: 11px; color: var(--vscode-descriptionForeground);">🌐</span>
                 <select id="${DomIds.LANG_SELECT}" style="padding: 4px 8px; font-size: 11px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); border-radius: 2px; cursor: pointer;">
-                    ${SUPPORTED_LANGUAGES.map(lang =>
-                        `<option value="${escapeHtml(lang.value)}">${escapeHtml(lang.label)}</option>`
+                    ${SUPPORTED_LANGUAGES.map(
+                        (lang) => `<option value="${escapeHtml(lang.value)}">${escapeHtml(lang.label)}</option>`
                     ).join('\n                    ')}
                 </select>
             </div>

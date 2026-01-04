@@ -24,12 +24,9 @@ export class WebviewPanelManager {
     createPanel(userRequest: string): vscode.WebviewPanel {
         Logger.log('Creating Webview panel...');
 
-        this.panel = vscode.window.createWebviewPanel(
-            UIConfig.PANEL_ID,
-            UIConfig.PANEL_TITLE,
-            vscode.ViewColumn.One,
-            { enableScripts: true }
-        );
+        this.panel = vscode.window.createWebviewPanel(UIConfig.PANEL_ID, UIConfig.PANEL_TITLE, vscode.ViewColumn.One, {
+            enableScripts: true,
+        });
 
         this.panel.webview.html = generateBaseHtml(userRequest);
         this.isDisposed = false;

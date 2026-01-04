@@ -49,10 +49,7 @@ interface RetryExecutorOptions {
  * Executes a function with retry logic and exponential backoff.
  * This is a shared utility to avoid code duplication.
  */
-async function executeWithRetry<T>(
-    execute: () => Promise<T>,
-    options: RetryExecutorOptions
-): Promise<T> {
+async function executeWithRetry<T>(execute: () => Promise<T>, options: RetryExecutorOptions): Promise<T> {
     const { retries, retryDelayMs, shouldRetry, description, token } = options;
     let lastError: Error | undefined;
 
@@ -76,9 +73,11 @@ async function executeWithRetry<T>(
             }
 
             const delay = retryDelayMs * Math.pow(2, attempt);
-            Logger.log(`Subagent "${description}" failed (attempt ${attempt + 1}/${retries + 1}), retrying in ${delay}ms: ${lastError.message}`);
+            Logger.log(
+                `Subagent "${description}" failed (attempt ${attempt + 1}/${retries + 1}), retrying in ${delay}ms: ${lastError.message}`
+            );
 
-            await new Promise(resolve => setTimeout(resolve, delay));
+            await new Promise((resolve) => setTimeout(resolve, delay));
         }
     }
 
@@ -140,25 +139,22 @@ export async function invokeSubagent(
     token: vscode.CancellationToken,
     options: SubagentOptions = {}
 ): Promise<string> {
-    const {
-        defaultValue = '',
-        onError,
-        retries = 3,
-        retryDelayMs = 1000,
-        shouldRetry = () => true
-    } = options;
+    const { defaultValue = '', onError, retries = 3, retryDelayMs = 1000, shouldRetry = () => true } = options;
 
     Logger.log(`invokeSubagent: ${description}`);
 
     const execute = async (): Promise<string> => {
-        Logger.log(`invokeSubagent: About to call vscode.lm.invokeTool with tool="${RuntimeConfig.TOOL_NAMES.SUBAGENT}"`);
+        Logger.log(
+            `invokeSubagent: About to call vscode.lm.invokeTool with tool="${RuntimeConfig.TOOL_NAMES.SUBAGENT}"`
+        );
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- toolInvocationToken can be undefined at runtime
         Logger.log(`invokeSubagent: toolInvocationToken is ${toolInvocationToken ? 'present' : 'undefined'}`);
 
         const result = await vscode.lm.invokeTool(
             RuntimeConfig.TOOL_NAMES.SUBAGENT,
             {
                 input: { description, prompt },
-                toolInvocationToken
+                toolInvocationToken,
             },
             token
         );
@@ -176,7 +172,7 @@ export async function invokeSubagent(
             retryDelayMs,
             shouldRetry,
             description,
-            token
+            token,
         });
         return result || defaultValue;
     } catch (error) {
@@ -200,12 +196,7 @@ export async function invokeSubagentWithFileOutput(
     token: vscode.CancellationToken,
     options: SubagentOptions = {}
 ): Promise<SubagentFileResult | null> {
-    const {
-        onError,
-        retries = 3,
-        retryDelayMs = 1000,
-        shouldRetry = () => true
-    } = options;
+    const { onError, retries = 3, retryDelayMs = 1000, shouldRetry = () => true } = options;
 
     Logger.log(`invokeSubagentWithFileOutput: ${description}`);
 
@@ -226,7 +217,7 @@ export async function invokeSubagentWithFileOutput(
             RuntimeConfig.TOOL_NAMES.SUBAGENT,
             {
                 input: { description, prompt: modifiedPrompt },
-                toolInvocationToken
+                toolInvocationToken,
             },
             token
         );
@@ -243,7 +234,7 @@ export async function invokeSubagentWithFileOutput(
         Logger.log(`invokeSubagentWithFileOutput: File content length = ${fileContent.length} chars`);
         return {
             content: fileContent,
-            filePath: outputFilePath
+            filePath: outputFilePath,
         };
     };
 
@@ -253,7 +244,7 @@ export async function invokeSubagentWithFileOutput(
             retryDelayMs,
             shouldRetry,
             description,
-            token
+            token,
         });
     } catch (error) {
         Logger.error(`invokeSubagentWithFileOutput error: ${description}`, error);

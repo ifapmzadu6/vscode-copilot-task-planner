@@ -10,10 +10,7 @@ import { tryFixJson } from './fixes';
  * @param validator - Optional function to validate the parsed object
  * @returns The parsed object or null if parsing fails after retries
  */
-export function parseJsonWithRetry<T>(
-    response: string,
-    validator?: (obj: unknown) => obj is T
-): T | null {
+export function parseJsonWithRetry<T>(response: string, validator?: (obj: unknown) => obj is T): T | null {
     // Try to find JSON object in the response
     const jsonMatch = /\{[\s\S]*\}/.exec(response);
     if (!jsonMatch) {
@@ -35,7 +32,9 @@ export function parseJsonWithRetry<T>(
 
             return parsed as T;
         } catch (error) {
-            Logger.log(`JSON parse error on attempt ${attempt + 1}: ${error instanceof Error ? error.message : 'Unknown'}`);
+            Logger.log(
+                `JSON parse error on attempt ${attempt + 1}: ${error instanceof Error ? error.message : 'Unknown'}`
+            );
 
             // Apply fixes and retry
             if (attempt < RuntimeConfig.MAX_JSON_PARSE_RETRIES - 1) {

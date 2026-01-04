@@ -2,12 +2,7 @@
  * Type guards for message validation
  */
 
-import {
-    Question,
-    QuestionResponse,
-    WebviewMessage,
-    WebviewIncomingMessage,
-} from './messages';
+import { Question, QuestionResponse, WebviewMessage, WebviewIncomingMessage } from './messages';
 
 /**
  * Checks if the value is a non-null object
@@ -45,26 +40,32 @@ export function isQuestionResponse(obj: unknown): obj is QuestionResponse {
 export function isWebviewMessage(msg: unknown): msg is WebviewIncomingMessage {
     if (!isObject(msg)) return false;
     if (typeof msg.type !== 'string') return false;
-    return Object.values(WebviewMessage).includes(msg.type as typeof WebviewMessage[keyof typeof WebviewMessage]);
+    return Object.values(WebviewMessage).includes(msg.type as (typeof WebviewMessage)[keyof typeof WebviewMessage]);
 }
 
 /**
  * Type guard for answer message
  */
-export function isAnswerMessage(msg: WebviewIncomingMessage): msg is { type: typeof WebviewMessage.ANSWER; answer: string } {
+export function isAnswerMessage(
+    msg: WebviewIncomingMessage
+): msg is { type: typeof WebviewMessage.ANSWER; answer: string } {
     return msg.type === WebviewMessage.ANSWER && 'answer' in msg && typeof msg.answer === 'string';
 }
 
 /**
  * Type guard for revise message
  */
-export function isReviseMessage(msg: WebviewIncomingMessage): msg is { type: typeof WebviewMessage.REVISE_PLAN; feedback: string } {
+export function isReviseMessage(
+    msg: WebviewIncomingMessage
+): msg is { type: typeof WebviewMessage.REVISE_PLAN; feedback: string } {
     return msg.type === WebviewMessage.REVISE_PLAN && 'feedback' in msg && typeof msg.feedback === 'string';
 }
 
 /**
  * Type guard for translate message
  */
-export function isTranslateMessage(msg: WebviewIncomingMessage): msg is { type: typeof WebviewMessage.TRANSLATE_PLAN; targetLang: string } {
+export function isTranslateMessage(
+    msg: WebviewIncomingMessage
+): msg is { type: typeof WebviewMessage.TRANSLATE_PLAN; targetLang: string } {
     return msg.type === WebviewMessage.TRANSLATE_PLAN && 'targetLang' in msg && typeof msg.targetLang === 'string';
 }

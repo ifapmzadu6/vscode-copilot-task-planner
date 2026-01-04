@@ -14,29 +14,25 @@ interface JsonFix {
 const JSON_FIXES: JsonFix[] = [
     {
         name: 'trailing commas',
-        fix: (json) => json
-            .replace(/,\s*}/g, '}')
-            .replace(/,\s*]/g, ']')
+        fix: (json) => json.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']'),
     },
     {
         name: 'single quotes to double quotes',
-        fix: (json) => json.replace(/'/g, '"')
+        fix: (json) => json.replace(/'/g, '"'),
     },
     {
         name: 'unquoted keys',
-        fix: (json) => json.replace(
-            /([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g,
-            '$1"$2":'
-        )
+        fix: (json) => json.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":'),
     },
     {
         name: 'control characters',
-        fix: (json) => json.replace(/[\x00-\x1F\x7F]/g, (char) => {
-            if (char === '\n') return '\\n';
-            if (char === '\r') return '\\r';
-            if (char === '\t') return '\\t';
-            return '';
-        })
+        fix: (json) =>
+            json.replace(/[\x00-\x1F\x7F]/g, (char) => {
+                if (char === '\n') return '\\n';
+                if (char === '\r') return '\\r';
+                if (char === '\t') return '\\t';
+                return '';
+            }),
     },
     {
         name: 'trailing text after JSON',
@@ -55,8 +51,8 @@ const JSON_FIXES: JsonFix[] = [
                 }
             }
             return lastClosingBrace >= 0 ? json.substring(0, lastClosingBrace + 1) : json;
-        }
-    }
+        },
+    },
 ];
 
 /**

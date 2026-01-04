@@ -26,12 +26,7 @@ export class PlanReviserService {
         Logger.log(`Revising plan with feedback: ${feedback}`);
         const prompt = buildRevisePlanPrompt(currentPlan, feedback);
 
-        const result = await invokeSubagent(
-            'Revise plan based on feedback',
-            prompt,
-            toolInvocationToken,
-            token
-        );
+        const result = await invokeSubagent('Revise plan based on feedback', prompt, toolInvocationToken, token);
 
         Logger.log(`Revised plan length: ${result.length}`);
         return result || currentPlan;

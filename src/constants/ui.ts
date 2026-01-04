@@ -88,4 +88,3 @@ export const UIConfig = {
         XS: 11,
     },
 } as const;
-
