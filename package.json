@@ -47,8 +47,8 @@
     "vscode:prepublish": "npm run compile",
     "compile": "npm run lint && tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
+    "lint": "eslint src --fix",
+    "lint:check": "eslint src",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "build": "npm run compile && vsce package"
