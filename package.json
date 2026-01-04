@@ -48,7 +48,6 @@
     "compile": "npm run lint && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --fix",
-    "format": "prettier --write \"src/**/*.ts\"",
     "build": "npm run compile && vsce package"
   },
   "devDependencies": {
