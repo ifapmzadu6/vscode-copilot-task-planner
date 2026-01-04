@@ -33,6 +33,6 @@ export function generateScript(): string {
         generateInitialization(),
         generateHelperFunctions(),
         generateMessageHandlers(),
-        generateEventListeners()
+        generateEventListeners(),
     ].join('\n');
 }

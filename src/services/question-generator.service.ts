@@ -3,12 +3,7 @@ import { Logger } from '../utils/logger';
 import { invokeSubagent } from '../utils/subagent';
 import { parseJsonWithRetry } from '../utils/json';
 import { buildNextQuestionPrompt } from '../prompts/templates';
-import {
-    Question,
-    CollectedAnswer,
-    QuestionResponse,
-    isQuestionResponse,
-} from '../types/messages';
+import { Question, CollectedAnswer, QuestionResponse, isQuestionResponse } from '../types/messages';
 
 /**
  * Manages the state of the question loop.
@@ -144,12 +139,7 @@ export class QuestionGeneratorService {
 
         let response = '';
         try {
-            response = await invokeSubagent(
-                'Generate next question',
-                prompt,
-                toolInvocationToken,
-                token
-            );
+            response = await invokeSubagent('Generate next question', prompt, toolInvocationToken, token);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             Logger.error('generateNextQuestion failed:', error);

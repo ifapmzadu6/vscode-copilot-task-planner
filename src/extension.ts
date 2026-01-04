@@ -40,6 +40,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
         Logger.log('========================================');
         Logger.log(`Input userRequest: "${userRequest}"`);
         Logger.log(`Input todoToolName: "${todoToolName ?? 'not specified'}"`);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- toolInvocationToken can be undefined at runtime
         Logger.log(`toolInvocationToken: ${options.toolInvocationToken ? 'present' : 'undefined'}`);
 
         const cleanRequest = this.cleanUserRequest(userRequest);
@@ -57,11 +58,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
             // Step 2: Analyze workspace context
             Logger.log('----------------------------------------');
             Logger.log('Step 2: Analyzing workspace context...');
-            const fullContext = await this.workspaceAnalyzer.analyze(
-                cleanRequest,
-                options.toolInvocationToken,
-                token
-            );
+            const fullContext = await this.workspaceAnalyzer.analyze(cleanRequest, options.toolInvocationToken, token);
             Logger.log(`Step 2: Complete - Context length: ${fullContext.length} chars`);
 
             // Step 3: Run question flow
@@ -72,9 +69,11 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
                 userRequest: cleanRequest,
                 context: fullContext,
                 toolInvocationToken: options.toolInvocationToken,
-                token
+                token,
             });
-            Logger.log(`Step 3: Complete - Cancelled: ${questionResult.cancelled}, Answers count: ${questionResult.answers.length}`);
+            Logger.log(
+                `Step 3: Complete - Cancelled: ${questionResult.cancelled}, Answers count: ${questionResult.answers.length}`
+            );
 
             if (questionResult.cancelled) {
                 Logger.log('Step 3: User cancelled during question flow');
@@ -91,9 +90,11 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
                 context: fullContext,
                 answers: questionResult.answers,
                 toolInvocationToken: options.toolInvocationToken,
-                token
+                token,
             });
-            Logger.log(`Step 4: Complete - Cancelled: ${planResult.cancelled}, Plan length: ${planResult.plan.length} chars`);
+            Logger.log(
+                `Step 4: Complete - Cancelled: ${planResult.cancelled}, Plan length: ${planResult.plan.length} chars`
+            );
 
             if (planResult.cancelled) {
                 Logger.log('Step 4: User cancelled during plan confirmation');
@@ -132,7 +133,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
                 '',
                 '## Execution Plan',
                 '',
-                planResult.plan
+                planResult.plan,
             ].join('\n');
 
             Logger.log(`Final result message length: ${resultMessage.length} chars`);
@@ -140,10 +141,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
             Logger.log('=== Marathon Planner: Complete ===');
             Logger.log('========================================');
 
-            return new vscode.LanguageModelToolResult([
-                new vscode.LanguageModelTextPart(resultMessage)
-            ]);
-
+            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(resultMessage)]);
         } catch (error) {
             Logger.error('========================================');
             Logger.error('=== Marathon Planner: ERROR ===');
@@ -157,7 +155,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
 
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             return new vscode.LanguageModelToolResult([
-                new vscode.LanguageModelTextPart(`Error during planning: ${errorMessage}`)
+                new vscode.LanguageModelTextPart(`Error during planning: ${errorMessage}`),
             ]);
         }
     }
@@ -185,9 +183,7 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
             'If the user wants to create a plan, they can invoke the planning tool again.',
         ].join('\n');
 
-        return new vscode.LanguageModelToolResult([
-            new vscode.LanguageModelTextPart(cancelMessage)
-        ]);
+        return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(cancelMessage)]);
     }
 
     prepareInvocation(
@@ -210,18 +206,19 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Initialize TempFileManager (fire-and-forget)
     const tempFileManager = getTempFileManager();
-    tempFileManager.initialize(context).then(() => {
-        tempFileManager.cleanupOldFiles().catch((err: unknown) => {
-            Logger.error('Failed to cleanup old temp files', err);
+    tempFileManager
+        .initialize(context)
+        .then(() => {
+            tempFileManager.cleanupOldFiles().catch((err: unknown) => {
+                Logger.error('Failed to cleanup old temp files', err);
+            });
+        })
+        .catch((err: unknown) => {
+            Logger.error('Failed to initialize TempFileManager', err);
         });
-    }).catch((err: unknown) => {
-        Logger.error('Failed to initialize TempFileManager', err);
-    });
 
     const tool = new TaskPlannerTool();
-    context.subscriptions.push(
-        vscode.lm.registerTool(RuntimeConfig.TOOL_NAMES.MARATHON_PLANNER, tool)
-    );
+    context.subscriptions.push(vscode.lm.registerTool(RuntimeConfig.TOOL_NAMES.MARATHON_PLANNER, tool));
 }
 
 export function deactivate() {

@@ -28,9 +28,7 @@ function isExtractedTasks(obj: unknown): obj is ExtractedTasks {
     if (!Array.isArray(candidate.tasks)) return false;
     return candidate.tasks.every(
         (task: unknown) =>
-            typeof task === 'object' &&
-            task !== null &&
-            typeof (task as Record<string, unknown>).content === 'string'
+            typeof task === 'object' && task !== null && typeof (task as Record<string, unknown>).content === 'string'
     );
 }
 
@@ -69,7 +67,7 @@ export class TaskRegistrationService {
             {
                 onError: (error) => {
                     Logger.error('Task Registration: Subagent extraction failed:', error);
-                }
+                },
             }
         );
 
@@ -100,10 +98,10 @@ export class TaskRegistrationService {
         const toolName = todoToolName ?? TaskRegistrationService.DEFAULT_TODO_TOOL_NAME;
         Logger.log(`Task Registration: Step 3 - Registering tasks via tool "${toolName}"...`);
 
-        const todosPayload = parsed.tasks.map(task => ({
+        const todosPayload = parsed.tasks.map((task) => ({
             content: task.content,
-            status: task.status || 'pending',
-            activeForm: this.toActiveForm(task.content)
+            status: task.status,
+            activeForm: this.toActiveForm(task.content),
         }));
         Logger.log(`Task Registration: Payload = ${JSON.stringify(todosPayload, null, 2)}`);
 
@@ -113,7 +111,7 @@ export class TaskRegistrationService {
                 toolName,
                 {
                     input: { todos: todosPayload },
-                    toolInvocationToken
+                    toolInvocationToken,
                 },
                 token
             );

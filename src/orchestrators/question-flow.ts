@@ -4,13 +4,7 @@ import { Logger } from '../utils/logger';
 import { safePostMessage, createPanelPromise } from '../utils/webview';
 import { MessageHandlerBuilder } from '../utils/message-handler-builder';
 import { QuestionGeneratorService, QuestionContext } from '../services';
-import {
-    Question,
-    CollectedAnswer,
-    ExtensionMessage,
-    WebviewMessage,
-    isAnswerMessage,
-} from '../types/messages';
+import { Question, CollectedAnswer, ExtensionMessage, WebviewMessage, isAnswerMessage } from '../types/messages';
 
 /**
  * Result of the question flow
@@ -92,13 +86,17 @@ export class QuestionFlowOrchestrator {
 
             // Break if done and minimum questions met
             if (questionResponse.done && hasMetMinimum) {
-                Logger.log(`Breaking loop: done=${questionResponse.done}, reason=${questionResponse.reason}, answers=${ctx.answers.length}`);
+                Logger.log(
+                    `Breaking loop: done=${questionResponse.done}, reason=${questionResponse.reason}, answers=${ctx.answers.length}`
+                );
                 break;
             }
 
             // If subagent said done but we haven't met minimum, log and continue
             if (questionResponse.done) {
-                Logger.log(`Subagent suggested done, but only ${ctx.answers.length} answers collected (min: ${RuntimeConfig.MIN_QUESTIONS}). Continuing...`);
+                Logger.log(
+                    `Subagent suggested done, but only ${ctx.answers.length} answers collected (min: ${RuntimeConfig.MIN_QUESTIONS}). Continuing...`
+                );
             }
 
             // Ask question in panel (question is narrowed to Question type by guards above)
@@ -147,9 +145,7 @@ export class QuestionFlowOrchestrator {
         Logger.log(`askQuestionInPanel: Q${questionNum}, canGoBack=${canGoBack}`);
 
         const handlers = new MessageHandlerBuilder<string | null>()
-            .on(WebviewMessage.ANSWER, (msg) =>
-                isAnswerMessage(msg) ? msg.answer : undefined
-            )
+            .on(WebviewMessage.ANSWER, (msg) => (isAnswerMessage(msg) ? msg.answer : undefined))
             .onReturn(WebviewMessage.BACK, '__BACK__')
             .onReturn(WebviewMessage.CANCEL, null)
             .build();
@@ -160,7 +156,7 @@ export class QuestionFlowOrchestrator {
                 type: ExtensionMessage.NEW_QUESTION,
                 questionNum,
                 question,
-                canGoBack
+                canGoBack,
             });
         });
     }
@@ -178,7 +174,7 @@ export class QuestionFlowOrchestrator {
             type: ExtensionMessage.QUESTION_ANSWERED,
             questionNum: ctx.currentIndex + 1,
             question: questionText,
-            answer
+            answer,
         });
     }
 }

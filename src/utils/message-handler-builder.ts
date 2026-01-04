@@ -1,6 +1,6 @@
 import { MessageHandler, WebviewIncomingMessage, WebviewMessage } from '../types/messages';
 
-type WebviewMessageType = typeof WebviewMessage[keyof typeof WebviewMessage];
+type WebviewMessageType = (typeof WebviewMessage)[keyof typeof WebviewMessage];
 
 /**
  * Fluent builder for creating message handler arrays.
@@ -50,16 +50,13 @@ export class MessageHandlerBuilder<T> {
      * @param callback - Callback to execute (can be async)
      * @returns this builder for chaining
      */
-    onContinue(
-        type: WebviewMessageType,
-        callback: (message: WebviewIncomingMessage) => void | Promise<void>
-    ): this {
+    onContinue(type: WebviewMessageType, callback: (message: WebviewIncomingMessage) => void | Promise<void>): this {
         this.handlers.push({
             type,
             handle: async (msg) => {
                 await callback(msg);
                 return undefined;
-            }
+            },
         });
         return this;
     }

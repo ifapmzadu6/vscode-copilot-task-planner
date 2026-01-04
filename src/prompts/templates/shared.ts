@@ -24,7 +24,5 @@ export function formatAnswersText(answers: CollectedAnswer[]): string {
     if (answers.length === 0) {
         return 'No questions asked yet.';
     }
-    return answers
-        .map((a, i) => `Q${i + 1}: ${a.question}\nA${i + 1}: ${a.answer}`)
-        .join('\n\n');
+    return answers.map((a, i) => `Q${i + 1}: ${a.question}\nA${i + 1}: ${a.answer}`).join('\n\n');
 }

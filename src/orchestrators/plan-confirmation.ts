@@ -4,7 +4,6 @@ import { safePostMessage, createPanelPromise } from '../utils/webview';
 import { MessageHandlerBuilder } from '../utils/message-handler-builder';
 import {
     PlanGeneratorService,
-    PlanGenerationResult,
     PlanTranslatorService,
     PlanReviserService,
     TaskRegistrationService,
@@ -79,13 +78,7 @@ export class PlanConfirmationOrchestrator {
         const { panel, userRequest, context, answers, toolInvocationToken, token } = options;
 
         Logger.log('Generating initial plan...');
-        const planResult = await this.generator.generate(
-            userRequest,
-            context,
-            answers,
-            toolInvocationToken,
-            token
-        );
+        const planResult = await this.generator.generate(userRequest, context, answers, toolInvocationToken, token);
 
         let refinedPrompt = planResult.content;
         const planFilePath = planResult.filePath;
@@ -95,16 +88,13 @@ export class PlanConfirmationOrchestrator {
         Logger.log('Starting plan confirmation loop...');
 
         let panelClosed = false;
-        panel.onDidDispose(() => { panelClosed = true; });
+        panel.onDidDispose(() => {
+            panelClosed = true;
+        });
 
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- panelClosed is mutated in callback
         while (!panelClosed && !token.isCancellationRequested) {
-            const confirmResult = await this.showPlanConfirmation(
-                panel,
-                refinedPrompt,
-                toolInvocationToken,
-                token
-            );
+            const confirmResult = await this.showPlanConfirmation(panel, refinedPrompt, toolInvocationToken, token);
 
             Logger.log(`Confirmation result: ${confirmResult?.type}`);
 
@@ -162,23 +152,21 @@ export class PlanConfirmationOrchestrator {
         // State for plan display
         const state = {
             content: plan,
-            isTranslated: false
+            isTranslated: false,
         };
 
         const sendPlan = () => {
             safePostMessage(panel, {
                 type: ExtensionMessage.SHOW_PLAN,
                 plan: state.content,
-                isTranslated: state.isTranslated
+                isTranslated: state.isTranslated,
             });
         };
 
         const handlers = new MessageHandlerBuilder<ConfirmResult | null>()
             .onReturn(WebviewMessage.APPROVE_PLAN, { type: 'approve' })
             .on(WebviewMessage.REVISE_PLAN, (msg) =>
-                isReviseMessage(msg)
-                    ? { type: 'revise', feedback: msg.feedback }
-                    : undefined
+                isReviseMessage(msg) ? { type: 'revise', feedback: msg.feedback } : undefined
             )
             .onContinue(WebviewMessage.TRANSLATE_PLAN, async (msg) => {
                 if (!isTranslateMessage(msg)) return;
