@@ -88,12 +88,42 @@ export class PlanConfirmationOrchestrator {
         Logger.log('Starting plan confirmation loop...');
 
         let panelClosed = false;
-        panel.onDidDispose(() => {
+        const disposeListener = panel.onDidDispose(() => {
             panelClosed = true;
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- panelClosed is mutated in callback
-        while (!panelClosed && !token.isCancellationRequested) {
+        try {
+            return await this.executeConfirmationLoop(
+                panel,
+                refinedPrompt,
+                planFilePath,
+                toolInvocationToken,
+                token,
+                () => panelClosed,
+                (newPlan) => {
+                    refinedPrompt = newPlan;
+                }
+            );
+        } finally {
+            disposeListener.dispose();
+        }
+    }
+
+    /**
+     * Executes the main confirmation loop.
+     */
+    private async executeConfirmationLoop(
+        panel: vscode.WebviewPanel,
+        initialPlan: string,
+        planFilePath: string,
+        toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
+        token: vscode.CancellationToken,
+        isPanelClosed: () => boolean,
+        updatePlan: (newPlan: string) => void
+    ): Promise<PlanConfirmationResult> {
+        let refinedPrompt = initialPlan;
+
+        while (!isPanelClosed() && !token.isCancellationRequested) {
             const confirmResult = await this.showPlanConfirmation(panel, refinedPrompt, toolInvocationToken, token);
 
             Logger.log(`Confirmation result: ${confirmResult?.type}`);
@@ -115,6 +145,7 @@ export class PlanConfirmationOrchestrator {
                     toolInvocationToken,
                     token
                 );
+                updatePlan(refinedPrompt);
             }
         }
 
@@ -150,7 +181,9 @@ export class PlanConfirmationOrchestrator {
         Logger.log('showPlanConfirmation');
 
         // State for plan display
+        // originalPlan tracks the current base plan (updated after revision)
         const state = {
+            originalPlan: plan,
             content: plan,
             isTranslated: false,
         };
@@ -173,8 +206,9 @@ export class PlanConfirmationOrchestrator {
 
                 safePostMessage(panel, { type: ExtensionMessage.TRANSLATING });
                 try {
+                    // Always translate from the current originalPlan (which includes revisions)
                     const translated = await this.translator.translate(
-                        plan,
+                        state.originalPlan,
                         msg.targetLang,
                         toolInvocationToken,
                         token
@@ -188,7 +222,7 @@ export class PlanConfirmationOrchestrator {
                 }
             })
             .onContinue(WebviewMessage.SHOW_ORIGINAL, () => {
-                state.content = plan;
+                state.content = state.originalPlan;
                 state.isTranslated = false;
                 sendPlan();
             })

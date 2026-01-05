@@ -139,8 +139,10 @@ export function generateComponentStyles(): string {
         }
         .btn-secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
         .status-panel {
-            display: none;
-            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
             padding: 24px;
             color: var(--vscode-descriptionForeground);
             font-size: 12px;

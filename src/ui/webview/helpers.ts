@@ -44,11 +44,28 @@ export function generateHelperFunctions(): string {
                 return question.options.map(opt =>
                     '<label class="option-item"><input type="radio" name="answer" value="' + escapeHtml(opt) + '"> ' + escapeHtml(opt) + '</label>'
                 ).join('') +
-                '<label class="option-item other-option"><input type="radio" name="answer" value="__OTHER__"> Other: <input type="text" id="${DomIds.OTHER_TEXT}" placeholder="Enter your answer..." onclick="document.querySelector(\\'input[value=__OTHER__]\\').checked = true;"></label>';
+                '<label class="option-item other-option"><input type="radio" name="answer" value="__OTHER__"> Other: <input type="text" id="${DomIds.OTHER_TEXT}" placeholder="Enter your answer..."></label>';
             } else if (question.type === 'multiline') {
                 return '<textarea id="answer" rows="3" placeholder="Your answer..."></textarea>';
             } else {
                 return '<input type="text" id="answer" placeholder="Your answer...">';
+            }
+        }
+
+        // Helper function to set up event listeners after creating input field
+        // Uses event delegation on inputArea to handle dynamically created elements
+        function setupInputFieldListeners() {
+            // Handle click/focus on "Other" text input to auto-select the radio
+            const otherText = document.getElementById('${DomIds.OTHER_TEXT}');
+            if (otherText) {
+                const selectOtherRadio = function() {
+                    const otherRadio = document.querySelector('input[value="__OTHER__"]');
+                    if (otherRadio) {
+                        otherRadio.checked = true;
+                    }
+                };
+                otherText.addEventListener('click', selectOtherRadio);
+                otherText.addEventListener('focus', selectOtherRadio);
             }
         }
 

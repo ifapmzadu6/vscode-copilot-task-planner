@@ -1,4 +1,5 @@
 import { CollectedAnswer } from '../../types/messages';
+import { RuntimeConfig } from '../../constants/runtime';
 import { formatAnswersText, READONLY_CONSTRAINT } from './shared';
 
 /**
@@ -10,6 +11,7 @@ import { formatAnswersText, READONLY_CONSTRAINT } from './shared';
  */
 export function buildNextQuestionPrompt(userRequest: string, context: string, answers: CollectedAnswer[]): string {
     const answersText = formatAnswersText(answers);
+    const minQuestions = RuntimeConfig.MIN_QUESTIONS;
 
     return `${READONLY_CONSTRAINT}
 
@@ -27,7 +29,7 @@ ${answersText}
 ## Your Task: Understand User Intent
 Before generating a question, you MAY investigate the workspace or use other tools to understand the project better.
 
-IMPORTANT: You MUST ask at least 1 question before marking done. Only mark done=true after you have collected at least 1 answer.
+IMPORTANT: You MUST ask at least ${minQuestions} questions before marking done. Only mark done=true after you have collected at least ${minQuestions} answers.
 
 ### Intent Discovery Strategy
 Based on the current state, ask about ONE uncovered topic using this priority:
@@ -83,7 +85,7 @@ IMPORTANT: Respond in the SAME LANGUAGE as the user's request. If the user wrote
 - The 5th "Other" option will be automatically added by the UI
 
 ## Output (JSON only)
-If you have collected at least 1 answer AND have enough info to understand user's true intent: {"done": true, "reason": "brief summary of understood intent"}
+If you have collected at least ${minQuestions} answers AND have enough info to understand user's true intent: {"done": true, "reason": "brief summary of understood intent"}
 Otherwise: {"done": false, "question": {"text": "Question?", "type": "select", "options": ["Option 1", "Option 2", "Option 3", "Option 4"] }}
 
 Return ONLY valid JSON.`;

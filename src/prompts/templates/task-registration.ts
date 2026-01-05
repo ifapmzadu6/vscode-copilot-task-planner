@@ -29,8 +29,8 @@ Output ONLY this JSON structure:
 \`\`\`json
 {
   "tasks": [
-    { "content": "First task description", "status": "pending" },
-    { "content": "Second task description", "status": "pending" }
+    { "content": "First task description" },
+    { "content": "Second task description" }
   ]
 }
 \`\`\`

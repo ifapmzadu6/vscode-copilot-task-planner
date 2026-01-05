@@ -11,11 +11,11 @@ import { parseJsonWithRetry } from '../../utils/json/parser';
 type TaskStatus = 'not-started' | 'in-progress' | 'completed';
 
 /**
- * Task item extracted from plan
+ * Task item extracted from plan.
+ * Note: status is not extracted because all new tasks start as 'not-started'.
  */
 interface ExtractedTask {
     content: string;
-    status?: TaskStatus;
 }
 
 /**
@@ -42,10 +42,11 @@ function isExtractedTasks(obj: unknown): obj is ExtractedTasks {
     if (typeof obj !== 'object' || obj === null) return false;
     const candidate = obj as Record<string, unknown>;
     if (!Array.isArray(candidate.tasks)) return false;
-    return candidate.tasks.every(
-        (task: unknown) =>
-            typeof task === 'object' && task !== null && typeof (task as Record<string, unknown>).content === 'string'
-    );
+    return candidate.tasks.every((task: unknown) => {
+        if (typeof task !== 'object' || task === null) return false;
+        const taskObj = task as Record<string, unknown>;
+        return typeof taskObj.content === 'string';
+    });
 }
 
 /**

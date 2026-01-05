@@ -157,7 +157,13 @@ export async function invokeSubagent(
     token: vscode.CancellationToken,
     options: SubagentOptions = {}
 ): Promise<string> {
-    const { defaultValue = '', onError, retries = 3, retryDelayMs = 1000, shouldRetry = () => true } = options;
+    const {
+        defaultValue = '',
+        onError,
+        retries = RuntimeConfig.SUBAGENT.DEFAULT_RETRIES,
+        retryDelayMs = RuntimeConfig.SUBAGENT.DEFAULT_RETRY_DELAY_MS,
+        shouldRetry = () => true,
+    } = options;
 
     Logger.log(`invokeSubagent: ${description}`);
 
@@ -214,7 +220,12 @@ export async function invokeSubagentWithFileOutput(
     token: vscode.CancellationToken,
     options: SubagentOptions = {}
 ): Promise<SubagentFileResult | null> {
-    const { onError, retries = 3, retryDelayMs = 1000, shouldRetry = () => true } = options;
+    const {
+        onError,
+        retries = RuntimeConfig.SUBAGENT.DEFAULT_RETRIES,
+        retryDelayMs = RuntimeConfig.SUBAGENT.DEFAULT_RETRY_DELAY_MS,
+        shouldRetry = () => true,
+    } = options;
 
     Logger.log(`invokeSubagentWithFileOutput: ${description}`);
 

@@ -51,16 +51,42 @@ export class QuestionFlowOrchestrator {
         const ctx = this.questionService.createContext();
         let panelClosed = false;
 
-        panel.onDidDispose(() => {
+        const disposeListener = panel.onDidDispose(() => {
             Logger.log('Panel disposed during question flow');
             panelClosed = true;
         });
 
+        try {
+            return await this.executeQuestionLoop(
+                ctx,
+                panel,
+                userRequest,
+                context,
+                toolInvocationToken,
+                token,
+                () => panelClosed
+            );
+        } finally {
+            disposeListener.dispose();
+        }
+    }
+
+    /**
+     * Executes the main question loop.
+     */
+    private async executeQuestionLoop(
+        ctx: QuestionContext,
+        panel: vscode.WebviewPanel,
+        userRequest: string,
+        context: string,
+        toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
+        token: vscode.CancellationToken,
+        isPanelClosed: () => boolean
+    ): Promise<QuestionFlowResult> {
         while (ctx.currentIndex < RuntimeConfig.MAX_QUESTIONS) {
             Logger.log(`Question loop iteration ${ctx.currentIndex + 1}`);
 
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- panelClosed is mutated in callback
-            if (token.isCancellationRequested || panelClosed) {
+            if (token.isCancellationRequested || isPanelClosed()) {
                 Logger.log(token.isCancellationRequested ? 'Cancellation requested' : 'Panel was closed');
                 break;
             }

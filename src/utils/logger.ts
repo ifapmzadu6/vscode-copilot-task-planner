@@ -4,17 +4,17 @@ import { RuntimeConfig } from '../constants/runtime';
 const LOG_PREFIX = RuntimeConfig.LOGGING.PREFIX;
 
 /**
- * Tracks the current extension mode for debug logging.
+ * Cached debug mode flag for efficient checking.
  * Set during extension activation.
  */
-let extensionMode: vscode.ExtensionMode = vscode.ExtensionMode.Production;
+let isDebugMode = false;
 
 /**
  * Initializes the logger with the extension context.
  * Call this during extension activation.
  */
 export function initializeLogger(context: vscode.ExtensionContext): void {
-    extensionMode = context.extensionMode;
+    isDebugMode = context.extensionMode === vscode.ExtensionMode.Development;
 }
 
 /**
@@ -48,8 +48,16 @@ export const Logger = {
      * Only outputs in development mode (when running via F5 debugging).
      */
     debug(message: string, ...args: unknown[]): void {
-        if (extensionMode === vscode.ExtensionMode.Development) {
+        if (isDebugMode) {
             console.debug(`${LOG_PREFIX} [DEBUG] ${message}`, ...args);
         }
+    },
+
+    /**
+     * Returns whether debug mode is enabled.
+     * Useful for conditional logic that should only run in development.
+     */
+    isDebugEnabled(): boolean {
+        return isDebugMode;
     },
 } as const;

@@ -12,6 +12,10 @@ export function generateQuestionHandlers(): string {
             qNum.textContent = message.questionNum;
             qText.textContent = message.question.text;
             inputArea.innerHTML = createInputField(message.question);
+
+            // Set up event listeners for dynamically created input elements
+            setupInputFieldListeners();
+
             currentQuestion.style.display = 'block';
             status.style.display = 'none';
 

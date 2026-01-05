@@ -5,6 +5,7 @@ import { tryFixJson } from './fixes';
 /**
  * Attempts to parse JSON from a response string with retry logic.
  * Tries to extract JSON object from the response and parse it.
+ * On parse failure, applies fixes to the JSON string and retries.
  *
  * @param response - The raw response string
  * @param validator - Optional function to validate the parsed object
@@ -19,40 +20,35 @@ export function parseJsonWithRetry<T>(response: string, validator?: (obj: unknow
     }
 
     let jsonStr = jsonMatch[0];
+    const maxAttempts = RuntimeConfig.MAX_JSON_PARSE_RETRIES;
 
-    for (let attempt = 0; attempt < RuntimeConfig.MAX_JSON_PARSE_RETRIES; attempt++) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
             const parsed: unknown = JSON.parse(jsonStr);
 
             // Validate if validator is provided
             if (validator && !validator(parsed)) {
-                Logger.log(`JSON validation failed on attempt ${attempt + 1}`);
+                Logger.log(`JSON validation failed on attempt ${attempt}/${maxAttempts}`);
+                // Apply fixes for next attempt if validation fails
+                if (attempt < maxAttempts) {
+                    jsonStr = tryFixJson(jsonStr);
+                }
                 continue;
             }
 
+            if (attempt > 1) {
+                Logger.log(`Successfully parsed JSON after ${attempt} attempts`);
+            }
             return parsed as T;
         } catch (error) {
-            Logger.log(
-                `JSON parse error on attempt ${attempt + 1}: ${error instanceof Error ? error.message : 'Unknown'}`
-            );
+            const errorMsg = error instanceof Error ? error.message : 'Unknown';
+            Logger.log(`JSON parse error on attempt ${attempt}/${maxAttempts}: ${errorMsg}`);
 
-            // Apply fixes and retry
-            if (attempt < RuntimeConfig.MAX_JSON_PARSE_RETRIES - 1) {
+            // Apply fixes for next attempt
+            if (attempt < maxAttempts) {
                 jsonStr = tryFixJson(jsonStr);
             }
         }
-    }
-
-    // Final attempt with all fixes applied
-    try {
-        const fixed = tryFixJson(jsonStr);
-        const parsed: unknown = JSON.parse(fixed);
-        if (!validator || validator(parsed)) {
-            Logger.log('Successfully parsed JSON after applying fixes');
-            return parsed as T;
-        }
-    } catch {
-        // Give up
     }
 
     Logger.log('Failed to parse JSON after all retries');

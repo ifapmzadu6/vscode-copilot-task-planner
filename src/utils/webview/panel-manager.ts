@@ -33,22 +33,26 @@ export class WebviewPanelManager {
             this.panel.webview.html = generateBaseHtml(userRequest);
             this.panel.reveal(vscode.ViewColumn.One);
             this.isDisposed = false;
+            // Note: disposables are already registered from the original creation
             return this.panel;
         }
 
         this.panel = vscode.window.createWebviewPanel(UIConfig.PANEL_ID, UIConfig.PANEL_TITLE, vscode.ViewColumn.One, {
             enableScripts: true,
+            retainContextWhenHidden: true,
         });
 
         this.panel.webview.html = generateBaseHtml(userRequest);
         this.isDisposed = false;
         WebviewPanelManager.existingPanel = this.panel;
 
-        // Track disposal
+        // Track disposal - this listener persists for the panel's lifetime
         const disposable = this.panel.onDidDispose(() => {
             Logger.log('Panel disposed');
             this.isDisposed = true;
             WebviewPanelManager.existingPanel = null;
+            // Clear disposables since panel is gone
+            this.disposables = [];
         });
         this.disposables.push(disposable);
 
