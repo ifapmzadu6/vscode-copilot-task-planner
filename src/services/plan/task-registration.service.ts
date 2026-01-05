@@ -1,22 +1,38 @@
 import * as vscode from 'vscode';
+import { RuntimeConfig } from '../../constants/runtime';
 import { Logger } from '../../utils/logger';
 import { invokeSubagent } from '../../utils/subagent';
 import { buildExtractTasksPrompt } from '../../prompts/templates';
 import { parseJsonWithRetry } from '../../utils/json/parser';
 
 /**
- * Task item structure
+ * Task status matching manage_todo_list schema
  */
-interface TaskItem {
+type TaskStatus = 'not-started' | 'in-progress' | 'completed';
+
+/**
+ * Task item extracted from plan
+ */
+interface ExtractedTask {
     content: string;
-    status: 'pending' | 'in_progress' | 'completed';
+    status?: TaskStatus;
+}
+
+/**
+ * Todo item matching manage_todo_list schema
+ */
+interface TodoItem {
+    id: number;
+    title: string;
+    description: string;
+    status: TaskStatus;
 }
 
 /**
  * Response from task extraction
  */
 interface ExtractedTasks {
-    tasks: TaskItem[];
+    tasks: ExtractedTask[];
 }
 
 /**
@@ -37,8 +53,6 @@ function isExtractedTasks(obj: unknown): obj is ExtractedTasks {
  * Single Responsibility: Task registration only.
  */
 export class TaskRegistrationService {
-    private static readonly DEFAULT_TODO_TOOL_NAME = 'manage_todo_list';
-
     /**
      * Registers tasks from the plan to the todo list.
      *
@@ -91,26 +105,28 @@ export class TaskRegistrationService {
         }
         Logger.log(`Task Registration: Step 2 Complete - Parsed ${parsed.tasks.length} tasks`);
         parsed.tasks.forEach((task, i) => {
-            Logger.log(`Task Registration: Task ${i + 1}: "${task.content}" (status: ${task.status})`);
+            Logger.log(`Task Registration: Task ${i + 1}: "${task.content}"`);
         });
 
         // Step 3: Register tasks programmatically using vscode.lm.invokeTool
-        const toolName = todoToolName ?? TaskRegistrationService.DEFAULT_TODO_TOOL_NAME;
+        const toolName = todoToolName ?? RuntimeConfig.DEFAULT_TODO_TOOL_NAME;
         Logger.log(`Task Registration: Step 3 - Registering tasks via tool "${toolName}"...`);
 
-        const todosPayload = parsed.tasks.map((task) => ({
-            content: task.content,
-            status: task.status,
-            activeForm: this.toActiveForm(task.content),
+        // Convert extracted tasks to manage_todo_list schema
+        const todoList: TodoItem[] = parsed.tasks.map((task, index) => ({
+            id: index + 1,
+            title: this.extractTitle(task.content),
+            description: task.content,
+            status: 'not-started' as TaskStatus,
         }));
-        Logger.log(`Task Registration: Payload = ${JSON.stringify(todosPayload, null, 2)}`);
+        Logger.log(`Task Registration: Payload = ${JSON.stringify({ todoList }, null, 2)}`);
 
         try {
             Logger.log('Task Registration: Calling vscode.lm.invokeTool...');
             const result = await vscode.lm.invokeTool(
                 toolName,
                 {
-                    input: { todos: todosPayload },
+                    input: { todoList },
                     toolInvocationToken,
                 },
                 token
@@ -129,42 +145,11 @@ export class TaskRegistrationService {
     }
 
     /**
-     * Converts a task content to active form (present continuous)
-     * e.g., "Create the file" -> "Creating the file"
+     * Extracts a short title from task content (first 7 words or less)
      */
-    private toActiveForm(content: string): string {
-        // Simple heuristic: prepend "Working on: " if we can't easily convert
-        const trimmed = content.trim();
-
-        // Try to convert common verb patterns
-        const verbPatterns: [RegExp, string][] = [
-            [/^Add\s/i, 'Adding '],
-            [/^Create\s/i, 'Creating '],
-            [/^Update\s/i, 'Updating '],
-            [/^Fix\s/i, 'Fixing '],
-            [/^Implement\s/i, 'Implementing '],
-            [/^Write\s/i, 'Writing '],
-            [/^Build\s/i, 'Building '],
-            [/^Test\s/i, 'Testing '],
-            [/^Remove\s/i, 'Removing '],
-            [/^Delete\s/i, 'Deleting '],
-            [/^Refactor\s/i, 'Refactoring '],
-            [/^Configure\s/i, 'Configuring '],
-            [/^Set up\s/i, 'Setting up '],
-            [/^Install\s/i, 'Installing '],
-            [/^Run\s/i, 'Running '],
-            [/^Review\s/i, 'Reviewing '],
-            [/^Verify\s/i, 'Verifying '],
-            [/^Check\s/i, 'Checking '],
-        ];
-
-        for (const [pattern, replacement] of verbPatterns) {
-            if (pattern.test(trimmed)) {
-                return trimmed.replace(pattern, replacement);
-            }
-        }
-
-        // Default: prepend "Working on: "
-        return `Working on: ${trimmed}`;
+    private extractTitle(content: string): string {
+        const words = content.trim().split(/\s+/);
+        const title = words.slice(0, 7).join(' ');
+        return words.length > 7 ? `${title}...` : title;
     }
 }

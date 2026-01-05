@@ -26,9 +26,19 @@ export class PlanReviserService {
         Logger.log(`Revising plan with feedback: ${feedback}`);
         const prompt = buildRevisePlanPrompt(currentPlan, feedback);
 
-        const result = await invokeSubagent('Revise plan based on feedback', prompt, toolInvocationToken, token);
+        try {
+            const result = await invokeSubagent('Revise plan based on feedback', prompt, toolInvocationToken, token);
 
-        Logger.log(`Revised plan length: ${result.length}`);
-        return result || currentPlan;
+            if (!result || result.trim().length === 0) {
+                Logger.warn('Plan revision returned empty result, using original plan');
+                return currentPlan;
+            }
+
+            Logger.log(`Revised plan length: ${result.length}`);
+            return result;
+        } catch (error) {
+            Logger.error('Plan revision failed:', error);
+            return currentPlan;
+        }
     }
 }

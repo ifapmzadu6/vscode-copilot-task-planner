@@ -1,6 +1,21 @@
+import * as vscode from 'vscode';
 import { RuntimeConfig } from '../constants/runtime';
 
 const LOG_PREFIX = RuntimeConfig.LOGGING.PREFIX;
+
+/**
+ * Tracks the current extension mode for debug logging.
+ * Set during extension activation.
+ */
+let extensionMode: vscode.ExtensionMode = vscode.ExtensionMode.Production;
+
+/**
+ * Initializes the logger with the extension context.
+ * Call this during extension activation.
+ */
+export function initializeLogger(context: vscode.ExtensionContext): void {
+    extensionMode = context.extensionMode;
+}
 
 /**
  * Centralized logging utility for the Task Planner extension.
@@ -30,10 +45,10 @@ export const Logger = {
 
     /**
      * Logs a debug message with the TaskPlanner prefix.
-     * Only outputs in development mode.
+     * Only outputs in development mode (when running via F5 debugging).
      */
     debug(message: string, ...args: unknown[]): void {
-        if (process.env.NODE_ENV === 'development') {
+        if (extensionMode === vscode.ExtensionMode.Development) {
             console.debug(`${LOG_PREFIX} [DEBUG] ${message}`, ...args);
         }
     },

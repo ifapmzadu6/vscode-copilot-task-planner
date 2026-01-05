@@ -9,20 +9,32 @@ import { safePostMessage, createPanelPromise } from './messaging';
 /**
  * Manages Webview panel lifecycle and state.
  * Provides a clean interface for panel creation, disposal tracking, and messaging.
+ * Uses singleton pattern to prevent duplicate panels.
  */
 export class WebviewPanelManager {
+    private static existingPanel: vscode.WebviewPanel | null = null;
     private panel: vscode.WebviewPanel | null = null;
     private isDisposed = false;
     private disposables: vscode.Disposable[] = [];
 
     /**
-     * Creates and initializes a new Webview panel.
+     * Creates and initializes a new Webview panel, or reveals existing one.
      *
      * @param userRequest - The user's task request to display
-     * @returns The created panel
+     * @returns The created or existing panel
      */
     createPanel(userRequest: string): vscode.WebviewPanel {
         Logger.log('Creating Webview panel...');
+
+        // Reuse existing panel if available
+        if (WebviewPanelManager.existingPanel) {
+            Logger.log('Reusing existing panel');
+            this.panel = WebviewPanelManager.existingPanel;
+            this.panel.webview.html = generateBaseHtml(userRequest);
+            this.panel.reveal(vscode.ViewColumn.One);
+            this.isDisposed = false;
+            return this.panel;
+        }
 
         this.panel = vscode.window.createWebviewPanel(UIConfig.PANEL_ID, UIConfig.PANEL_TITLE, vscode.ViewColumn.One, {
             enableScripts: true,
@@ -30,11 +42,13 @@ export class WebviewPanelManager {
 
         this.panel.webview.html = generateBaseHtml(userRequest);
         this.isDisposed = false;
+        WebviewPanelManager.existingPanel = this.panel;
 
         // Track disposal
         const disposable = this.panel.onDidDispose(() => {
             Logger.log('Panel disposed');
             this.isDisposed = true;
+            WebviewPanelManager.existingPanel = null;
         });
         this.disposables.push(disposable);
 

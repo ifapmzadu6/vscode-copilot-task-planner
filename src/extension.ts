@@ -13,7 +13,7 @@ import { WorkspaceAnalysisService } from './services';
 import { QuestionFlowOrchestrator, PlanConfirmationOrchestrator } from './orchestrators';
 
 // Import utilities
-import { Logger } from './utils/logger';
+import { Logger, initializeLogger } from './utils/logger';
 import { WebviewPanelManager } from './utils/webview';
 import { getTempFileManager } from './utils/temp-file-manager';
 
@@ -202,6 +202,8 @@ class TaskPlannerTool implements vscode.LanguageModelTool<PlanToolInput> {
 // ============================================================
 
 export function activate(context: vscode.ExtensionContext) {
+    // Initialize logger first for proper debug mode detection
+    initializeLogger(context);
     Logger.log('Extension activated');
 
     // Initialize TempFileManager (fire-and-forget)

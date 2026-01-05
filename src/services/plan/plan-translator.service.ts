@@ -26,8 +26,19 @@ export class PlanTranslatorService {
         Logger.log(`Translating plan to ${targetLang}`);
         const prompt = buildTranslatePlanPrompt(plan, targetLang);
 
-        const result = await invokeSubagent(`Translate plan to ${targetLang}`, prompt, toolInvocationToken, token);
+        try {
+            const result = await invokeSubagent(`Translate plan to ${targetLang}`, prompt, toolInvocationToken, token);
 
-        return result || plan;
+            if (!result || result.trim().length === 0) {
+                Logger.warn(`Translation to ${targetLang} returned empty result, using original plan`);
+                return plan;
+            }
+
+            Logger.log(`Translation to ${targetLang} successful, result length: ${result.length}`);
+            return result;
+        } catch (error) {
+            Logger.error(`Translation to ${targetLang} failed:`, error);
+            return plan;
+        }
     }
 }
