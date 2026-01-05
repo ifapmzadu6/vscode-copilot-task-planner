@@ -22,6 +22,16 @@ export function generateQuestionEventListeners(): string {
             vscode.postMessage({ type: 'back' });
         });
 
+        // Regenerate button handler
+        regenerateBtn.addEventListener('click', () => {
+            hideQuestionError();
+            // Show loading state
+            currentQuestion.style.display = 'none';
+            status.style.display = 'block';
+            statusText.textContent = '${StatusMessages.REGENERATING_QUESTION}';
+            vscode.postMessage({ type: 'regenerate' });
+        });
+
         // Submit answer button handler
         submitBtn.addEventListener('click', () => {
             const answer = getAnswer();

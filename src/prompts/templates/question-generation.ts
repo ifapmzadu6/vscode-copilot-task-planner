@@ -9,9 +9,16 @@ import { formatAnswersText, READONLY_CONSTRAINT } from './shared';
 /**
  * Builds prompt for generating the next question
  */
-export function buildNextQuestionPrompt(userRequest: string, context: string, answers: CollectedAnswer[]): string {
+export function buildNextQuestionPrompt(
+    userRequest: string,
+    context: string,
+    answers: CollectedAnswer[],
+    rejectedQuestions: string[] = []
+): string {
     const answersText = formatAnswersText(answers);
     const minQuestions = RuntimeConfig.MIN_QUESTIONS;
+    const rejectedText =
+        rejectedQuestions.length > 0 ? rejectedQuestions.map((q, i) => `${i + 1}. "${q}"`).join('\n') : '(None)';
 
     return `${READONLY_CONSTRAINT}
 
@@ -25,6 +32,9 @@ ${context}
 
 ## Already Covered Topics (DO NOT repeat these)
 ${answersText}
+
+## REJECTED Questions (User requested different questions - DO NOT ask these again)
+${rejectedText}
 
 ## Your Task: Understand User Intent
 Before generating a question, you MAY investigate the workspace or use other tools to understand the project better.

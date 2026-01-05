@@ -5,6 +5,9 @@ import { parseJsonWithRetry } from '../utils/json';
 import { buildNextQuestionPrompt } from '../prompts/templates';
 import { Question, CollectedAnswer, QuestionResponse, isQuestionResponse } from '../types/messages';
 
+/** Maximum number of rejected questions to track per question index */
+const MAX_REJECTED_PER_INDEX = 3;
+
 /**
  * Manages the state of the question loop.
  */
@@ -15,6 +18,8 @@ export interface QuestionContext {
     history: { question: Question; response: QuestionResponse }[];
     /** Current question index */
     currentIndex: number;
+    /** Questions that were rejected by the user, keyed by question index */
+    rejectedQuestionsMap: Map<number, string[]>;
 }
 
 /**
@@ -30,6 +35,7 @@ export class QuestionGeneratorService {
             answers: [],
             history: [],
             currentIndex: 0,
+            rejectedQuestionsMap: new Map(),
         };
     }
 
@@ -59,10 +65,12 @@ export class QuestionGeneratorService {
         // Generate new question
         Logger.log('Generating new question...');
         const answersForGeneration = ctx.answers.slice(0, ctx.currentIndex);
+        const rejectedForCurrentIndex = ctx.rejectedQuestionsMap.get(ctx.currentIndex) ?? [];
         const questionResponse = await this.generateNextQuestion(
             userRequest,
             fullContext,
             answersForGeneration,
+            rejectedForCurrentIndex,
             toolInvocationToken,
             token
         );
@@ -125,16 +133,44 @@ export class QuestionGeneratorService {
     }
 
     /**
+     * Clears the current question from cache to force regeneration.
+     * Records the rejected question so it won't be generated again.
+     * @param ctx - The question context
+     */
+    clearCurrentQuestion(ctx: QuestionContext): void {
+        // Record the rejected question before removing it
+        if (ctx.currentIndex < ctx.history.length) {
+            const rejectedQuestion = ctx.history[ctx.currentIndex].question.text;
+
+            // Get or create the rejected list for this index
+            const rejectedList = ctx.rejectedQuestionsMap.get(ctx.currentIndex) ?? [];
+            rejectedList.push(rejectedQuestion);
+
+            // Limit to most recent rejections to prevent prompt bloat
+            if (rejectedList.length > MAX_REJECTED_PER_INDEX) {
+                rejectedList.shift();
+            }
+
+            ctx.rejectedQuestionsMap.set(ctx.currentIndex, rejectedList);
+            ctx.history.splice(ctx.currentIndex, 1);
+            Logger.log(
+                `Cleared and recorded rejected question at index ${ctx.currentIndex}: "${rejectedQuestion}" (total rejected for this index: ${rejectedList.length})`
+            );
+        }
+    }
+
+    /**
      * Generates the next question using the subagent.
      */
     private async generateNextQuestion(
         userRequest: string,
         context: string,
         collectedAnswers: CollectedAnswer[],
+        rejectedQuestions: string[],
         toolInvocationToken: vscode.ChatParticipantToolToken | undefined,
         token: vscode.CancellationToken
     ): Promise<QuestionResponse> {
-        const prompt = buildNextQuestionPrompt(userRequest, context, collectedAnswers);
+        const prompt = buildNextQuestionPrompt(userRequest, context, collectedAnswers, rejectedQuestions);
         Logger.log('generateNextQuestion prompt sent');
 
         let response = '';

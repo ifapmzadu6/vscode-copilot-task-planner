@@ -16,6 +16,7 @@ function generateInitialization(): string {
         const statusText = document.getElementById('${DomIds.STATUS_TEXT}');
         const submitBtn = document.getElementById('${DomIds.SUBMIT_BTN}');
         const backBtn = document.getElementById('${DomIds.BACK_BTN}');
+        const regenerateBtn = document.getElementById('${DomIds.REGENERATE_BTN}');
 
         let currentQuestionData = null;
 

@@ -25,6 +25,9 @@ export function generateQuestionHandlers(): string {
             // Show/hide back button
             backBtn.style.display = message.canGoBack ? 'inline-block' : 'none';
 
+            // Always show regenerate button (can regenerate any question)
+            regenerateBtn.style.display = 'inline-block';
+
             // Focus on the input
             const input = inputArea.querySelector('input, textarea');
             if (input) input.focus();

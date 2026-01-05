@@ -146,6 +146,13 @@ export class QuestionFlowOrchestrator {
                 continue;
             }
 
+            if (result === '__REGENERATE__') {
+                // Clear the current question from cache and regenerate
+                this.questionService.clearCurrentQuestion(ctx);
+                Logger.log('User requested question regeneration');
+                continue;
+            }
+
             // Store answer and update panel
             this.questionService.storeAnswer(ctx, question.text, result);
             this.notifyQuestionAnswered(panel, ctx, question.text, result);
@@ -173,6 +180,7 @@ export class QuestionFlowOrchestrator {
         const handlers = new MessageHandlerBuilder<string | null>()
             .on(WebviewMessage.ANSWER, (msg) => (isAnswerMessage(msg) ? msg.answer : undefined))
             .onReturn(WebviewMessage.BACK, '__BACK__')
+            .onReturn(WebviewMessage.REGENERATE, '__REGENERATE__')
             .onReturn(WebviewMessage.CANCEL, null)
             .build();
 

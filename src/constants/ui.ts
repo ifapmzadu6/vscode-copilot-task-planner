@@ -16,6 +16,7 @@ export const DomIds = {
     INPUT_AREA: 'input-area',
     SUBMIT_BTN: 'submitBtn',
     BACK_BTN: 'backBtn',
+    REGENERATE_BTN: 'regenerateBtn',
     OTHER_TEXT: 'other-text',
     QUESTION_ERROR: 'question-error',
 
@@ -48,6 +49,7 @@ export const DomIds = {
 export const StatusMessages = {
     ANALYZING_WORKSPACE: 'Analyzing workspace...',
     THINKING_NEXT_QUESTION: 'Thinking of next question...',
+    REGENERATING_QUESTION: 'Regenerating question...',
     GENERATING_PLAN: 'Generating detailed plan...',
     TRANSLATING_PLAN: 'Translating plan...',
     REVISING_PLAN: 'Revising plan based on feedback...',

@@ -26,6 +26,7 @@ export const ExtensionMessage = {
 export const WebviewMessage = {
     ANSWER: 'answer',
     BACK: 'back',
+    REGENERATE: 'regenerate',
     CANCEL: 'cancel',
     APPROVE_PLAN: 'approvePlan',
     REVISE_PLAN: 'revisePlan',
@@ -95,6 +96,7 @@ export interface ConfirmResult {
 export type WebviewIncomingMessage =
     | { type: typeof WebviewMessage.ANSWER; answer: string }
     | { type: typeof WebviewMessage.BACK }
+    | { type: typeof WebviewMessage.REGENERATE }
     | { type: typeof WebviewMessage.CANCEL }
     | { type: typeof WebviewMessage.APPROVE_PLAN }
     | { type: typeof WebviewMessage.REVISE_PLAN; feedback: string }

@@ -29,7 +29,8 @@ function generateHtmlStructure(userRequest: string): string {
                 <span id="${DomIds.QUESTION_ERROR}" class="error-text" style="display: none;"></span>
             </div>
             <div class="button-row-right">
-                <button type="button" class="btn-secondary" id="${DomIds.BACK_BTN}" style="display: none;">Back</button>
+                <button type="button" class="btn-secondary" id="${DomIds.REGENERATE_BTN}" style="display: none;">Regenerate Question</button>
+                <button type="button" class="btn-secondary" id="${DomIds.BACK_BTN}" style="display: none;">Previous Question</button>
             </div>
         </div>
     </div>
